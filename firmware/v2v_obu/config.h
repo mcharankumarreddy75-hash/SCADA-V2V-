@@ -181,3 +181,119 @@
 #define ALERT_NORMAL_BLINK_MS     1000   // green 1 Hz without GPS fix
 #define ALERT_LAMP_TEST_MS        100    // boot lamp test beep
 #define ALERT_NUM_PATTERNS        7
+
+// ===== Added in Phase 6 =====
+// Modbus RTU slave (modbus_rtu.h, §S11.1). Slave ID and baud: MODBUS_SLAVE_ID / MODBUS_BAUD above.
+#define MODBUS_FC_READ_HOLDING      0x03
+#define MODBUS_FC_WRITE_SINGLE      0x06
+#define MODBUS_FC_WRITE_MULTI       0x10
+#define MODBUS_EX_ILLEGAL_FUNCTION  0x01
+#define MODBUS_EX_ILLEGAL_ADDRESS   0x02
+#define MODBUS_EX_ILLEGAL_VALUE     0x03
+#define MODBUS_BROADCAST_ID         0
+#define MODBUS_REG_COUNT            110    // holding registers 0-109
+#define MODBUS_MAX_READ_QTY         125
+#define MODBUS_MAX_WRITE_QTY        123
+#define MODBUS_MAX_FRAME            256    // largest RTU frame buffer (ADU)
+#define MODBUS_FRAME_TIMEOUT_US     50000  // silence this long resets a partial frame (USB CDC delivers in bursts)
+// Gateway register map (§S11.2)
+#define GW_REG_FW_VERSION           0
+#define GW_REG_STATUS               1
+#define GW_REG_NEIGHBOR_COUNT       2
+#define GW_REG_LAST_RTT_MS          3
+#define GW_REG_CMD_ACK_COUNT        4
+#define GW_REG_RX_TOTAL             5
+#define GW_REG_TX_TOTAL             6
+#define GW_REG_CRC_ERRORS           7
+#define GW_REG_GATEWAY_ID           8
+#define GW_REG_UPTIME_S             9
+#define GW_STATUS_RADIO_OK          (1u << 0)
+#define GW_STATUS_GPS_FIX           (1u << 1)
+#define GW_STATUS_IMU_OK            (1u << 2)
+#define GW_STATUS_SIM_MODE          (1u << 3)
+// Vehicle slots (§S11.3): base = GW_SLOT_BASE + GW_SLOT_SIZE * slot
+#define GW_SLOT_BASE                10
+#define GW_SLOT_SIZE                20
+#define GW_NUM_SLOTS                4      // slot 0 = own vehicle, slots 1-3 = neighbours
+#define GW_NB_SLOTS                 3
+#define GW_RESERVED_LO_FIRST        90     // registers 90-99 reserved (read 0)
+#define GW_RESERVED_LO_LAST         99
+#define GW_RESERVED_HI_FIRST        104    // registers 104-109 reserved (read 0)
+#define GW_RESERVED_HI_LAST         109
+#define GW_OFF_ID                   0
+#define GW_OFF_LAT_HI               1
+#define GW_OFF_LAT_LO               2
+#define GW_OFF_LON_HI               3
+#define GW_OFF_LON_LO               4
+#define GW_OFF_SPEED                5
+#define GW_OFF_HEADING              6
+#define GW_OFF_ACCEL                7
+#define GW_OFF_ROLL                 8
+#define GW_OFF_PITCH                9
+#define GW_OFF_FLAGS                10
+#define GW_OFF_BATTERY              11
+#define GW_OFF_RSSI                 12
+#define GW_OFF_SNR                  13
+#define GW_OFF_PDR                  14
+#define GW_OFF_DISTANCE             15
+#define GW_OFF_TTC                  16
+#define GW_OFF_WARN                 17
+#define GW_OFF_GPS_QUALITY          18
+#define GW_OFF_AGE_MS              19
+// Commands (§S11.4)
+#define GW_REG_CMD_CODE             100
+#define GW_REG_CMD_PARAM            101
+#define GW_REG_CMD_TARGET           102
+#define GW_REG_CMD_TRIGGER          103
+#define GW_CMD_HAZARD_ALERT         1
+#define GW_CMD_SPEED_ADVISORY       2
+#define GW_CMD_CLEAR_SOS            3
+#define GW_CMD_BUZZER_TEST          4
+#define GW_CMD_PING                 5
+#define GW_CMD_MAX_LOCAL            4      // codes 1-4 also run on the gateway's own vehicle
+#define GW_TRIGGER_VALUE            1
+#define GW_NONE                     65535  // "no value" for distance / TTC / unknown
+#define GW_PDR_FULL                 1000   // 100.0 % in 0.1 % units
+#define GW_UPDATE_PERIOD_MS         100
+
+// ===== Added in Phase 5 =====
+// Build options (set by tools/flash.py; defaults here)
+#ifndef LOG_MODE
+#define LOG_MODE                  0        // reserved for Phase 8 (flash.py --log)
+#endif
+
+// Simulation (SIM_MODE). SIM_LAT0_E7 / SIM_LON0_E7 above stay 0 until the college
+// coordinates are known; sim.cpp then uses the PLACEHOLDER values below.
+// PLACEHOLDER: replace with the real college latitude / longitude x 1e7.
+#define SIM_LAT0_PLACEHOLDER_E7   173850000
+#define SIM_LON0_PLACEHOLDER_E7   784867000
+#define SIM_START_WEST_M          120.0    // vehicle 2 starts this far west of vehicle 1
+#define SIM_SPEED_MS              8.0      // vehicle 2 approach speed
+#define SIM_STOP_BEHIND_M         3.0      // vehicle 2 stops this far behind vehicle 1
+#define SIM_WAIT_MS               10000UL  // vehicle 2 waits at the stop point, then repeats
+
+// Main loop scheduler (S10.5)
+#define LOOP_IMU_PERIOD_MS        10       // imu_update + detectors (100 Hz)
+#define LOOP_FCW_PERIOD_MS        50       // nb_expire + FCW (20 Hz)
+#define LOOP_GW_REG_PERIOD_MS     100      // gw_update_registers (gateway only)
+#define LOOP_SEC_PERIOD_MS        1000     // power_read, radio enable, debug line
+#define WATCHDOG_TIMEOUT_US       2000000UL
+#define LED_FAIL_BLINK_MS         100      // radio failure: red LED 5 Hz (100 on / 100 off)
+#define DEBUG_BAUD                115200
+#define DEBUG_LINE_MAX           256
+
+// Alert durations for received events and commands
+#define ALERT_EEBL_RX_MS          2000     // S9.4 receiver: EEBL pattern
+#define ALERT_SOS_REMOTE_RX_MS    5000     // S9.5 receiver: SOS_REMOTE pattern
+#define ALERT_HAZARD_RX_MS        2000     // S9.7 receiver: HAZARD pattern
+#define ALERT_CMD_HAZARD_MS       3000     // S11.4 code 1
+#define ALERT_CMD_FCW_MS          3000     // S11.4 code 2 (over the speed limit)
+#define ALERT_CMD_BUZZER_MS       2000     // S11.4 code 4
+
+// Command codes (S11.4 CMD_CODE)
+#define CMD_CODE_HAZARD_ALERT     1
+#define CMD_CODE_SPEED_ADVISORY   2
+#define CMD_CODE_CLEAR_SOS        3
+#define CMD_CODE_BUZZER_TEST      4
+#define CMD_CODE_PING             5        // not a vehicle COMMAND: PING packet instead
+#define KMH_PER_MS                3.6      // km/h per m/s (S11.4 code 2)
