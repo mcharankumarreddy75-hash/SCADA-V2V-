@@ -28,3 +28,4 @@ Thumbs.db
 .vscode/
 # Claude local settings
 .claude/settings.local.json
+scada/node-red/.config.*.backup
