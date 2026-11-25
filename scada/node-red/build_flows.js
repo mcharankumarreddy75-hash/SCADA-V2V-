@@ -445,7 +445,7 @@ const fnCmd = func('Command builder', body(function () {
         const code = Number(q.code), param = Number(q.param || 0), target = Number(q.target || 0);
         if (!Number.isInteger(code) || code < 1 || code > 5) return fail('code must be 1..5');
         if (!Number.isInteger(param) || param < 0 || param > 65535) return fail('param must be 0..65535');
-        if (!Number.isInteger(target) || target < 0 || target > 65535) return fail('target must be 0..65535');
+        if (!Number.isInteger(target) || target < 0 || target > 254) return fail('target must be 0 (all) or a vehicle id 1..254');
         msg.payload = [code, param, target, 1];
         return [msg, null];
     }

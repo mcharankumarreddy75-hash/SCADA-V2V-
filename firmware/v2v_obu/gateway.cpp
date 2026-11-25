@@ -44,8 +44,13 @@ static void on_write(void *ctx, uint16_t addr, uint16_t value) {
         return;
     }
     if (addr == GW_REG_CMD_TRIGGER && value == GW_TRIGGER_VALUE) {
-        gw_run_command((uint8_t)s_regs[GW_REG_CMD_CODE], s_regs[GW_REG_CMD_PARAM],
-                       (uint8_t)s_regs[GW_REG_CMD_TARGET], millis());
+        // Validate the full 16-bit values BEFORE narrowing: a target of 256 must not wrap to 0
+        // (broadcast) and a code of 257 must not wrap to 1 (§S11.4).
+        uint16_t code = s_regs[GW_REG_CMD_CODE];
+        uint16_t target = s_regs[GW_REG_CMD_TARGET];
+        if (code >= GW_CMD_HAZARD_ALERT && code <= GW_CMD_PING && target <= GW_CMD_TARGET_MAX) {
+            gw_run_command((uint8_t)code, s_regs[GW_REG_CMD_PARAM], (uint8_t)target, millis());
+        }
         s_regs[GW_REG_CMD_TRIGGER] = 0;
     }
 }

@@ -252,6 +252,7 @@
 #define GW_CMD_BUZZER_TEST          4
 #define GW_CMD_PING                 5
 #define GW_CMD_MAX_LOCAL            4      // codes 1-4 also run on the gateway's own vehicle
+#define GW_CMD_TARGET_MAX           254    // vehicle IDs 1-254 (§S8.2); 0 = all
 #define GW_TRIGGER_VALUE            1
 #define GW_NONE                     65535  // "no value" for distance / TTC / unknown
 #define GW_PDR_FULL                 1000   // 100.0 % in 0.1 % units
