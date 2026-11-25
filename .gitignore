@@ -1,0 +1,30 @@
+# Arduino / build
+build/
+*.bin
+*.elf
+*.hex
+*.map
+# Host tests
+tests/host/build/
+*.exe
+*.o
+# Python
+tools/.venv/
+__pycache__/
+*.pyc
+# Node
+node_modules/
+scada/node-red/.node-red/
+scada/node-red/.config.*.json
+scada/node-red/.flows*.backup
+scada/node-red/flows_cred.json
+# SQLite
+*.db
+*.db-journal
+*.sqlite
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+# Claude local settings
+.claude/settings.local.json

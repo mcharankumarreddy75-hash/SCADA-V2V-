@@ -1,0 +1,22 @@
+arduino-cli: 1.6.0
+core STMicroelectronics:stm32: 3.1.0
+core : 
+lib ModbusADU: 1.0.2
+lib ModbusRTUComm: 1.3.2
+lib ModbusRTUSlave: 3.1.2
+lib ModbusSlaveLogic: 1.0.1
+lib RadioLib: 8.0.0
+lib TinyGPSPlus: 1.0.3
+python: 3.12.10
+pip matplotlib==3.11.2
+pip numpy==2.5.5
+pip pymodbus==3.16.2
+pip pyserial==3.5
+node: v24.18.0
+g++: 16.2.0 (WinLibs MinGW-w64 UCRT)
+npm @flowfuse/node-red-dashboard@1.37.0
+npm modbus-serial@8.0.25
+npm node-red-contrib-web-worldmap@5.9.2
+npm node-red-node-sqlite@2.0.1
+npm node-red@5.0.10
+npm 

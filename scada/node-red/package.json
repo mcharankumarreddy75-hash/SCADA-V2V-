@@ -1,0 +1,20 @@
+{
+  "name": "v2v-scada-node-red",
+  "version": "1.0.0",
+  "private": true,
+  "description": "V2V SCADA — project-local Node-RED install",
+  "scripts": {
+    "start": "node-red --userDir . --port 1880 flows.json"
+  },
+  "dependencies": {
+    "@flowfuse/node-red-dashboard": "1.37.0",
+    "modbus-serial": "8.0.25",
+    "node-red": "5.0.10",
+    "node-red-contrib-web-worldmap": "5.9.2",
+    "node-red-node-sqlite": "2.0.1"
+  },
+  "allowScripts": {
+    "sqlite3@6.0.1": true,
+    "@serialport/bindings-cpp@13.0.0": true
+  }
+}
