@@ -97,3 +97,87 @@
 // ===== Modbus =====
 #define MODBUS_SLAVE_ID  1
 #define MODBUS_BAUD      115200
+
+// ===== Added in Phase 4 =====
+// Radio
+#define RADIO_PAYLOAD_LEN       32       // = sizeof(v2v_packet_t)
+#define RADIO_EVENT_QUEUE_SIZE  4        // event TX queue entries (oldest replaced when full)
+// GPS
+#define GPS_BOOT_NMEA_TIMEOUT_MS  2000   // no valid NMEA at 38400 within this -> try 9600
+#define GPS_FIX_TIMEOUT_MS        2000   // fix considered lost after this long without a fix
+#define GPS_BAUD_SWITCH_WAIT_MS   100    // after UBX CFG-PRT, before reopening the port
+#define GPS_UBX_GAP_MS            50     // pause between UBX commands (boot only)
+#define GPS_UBX_MAX_PAYLOAD       36     // largest payload sent (CFG-NAV5)
+#define GPS_DAY_MS                86400000UL
+#define UBX_SYNC1                 0xB5
+#define UBX_SYNC2                 0x62
+#define UBX_CLASS_CFG             0x06
+#define UBX_ID_CFG_MSG            0x01
+#define UBX_ID_CFG_RATE           0x08
+#define UBX_ID_CFG_PRT            0x00
+#define UBX_ID_CFG_NAV5           0x24
+#define UBX_ID_CFG_CFG            0x09
+// UBX payloads (spec S10.4 table)
+#define UBX_PAYLOAD_MSG_OFF_GSV   {0xF0, 0x03, 0x00}
+#define UBX_PAYLOAD_MSG_OFF_GSA   {0xF0, 0x02, 0x00}
+#define UBX_PAYLOAD_MSG_OFF_GLL   {0xF0, 0x01, 0x00}
+#define UBX_PAYLOAD_MSG_OFF_VTG   {0xF0, 0x05, 0x00}
+#define UBX_PAYLOAD_NAV5_AUTO     {0x01, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, \
+                                   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, \
+                                   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, \
+                                   0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+#define UBX_PAYLOAD_RATE_5HZ      {0xC8, 0x00, 0x01, 0x00, 0x01, 0x00}
+#define UBX_PAYLOAD_PRT_38400     {0x01, 0x00, 0x00, 0x00, 0xD0, 0x08, 0x00, 0x00, 0x00, 0x96, \
+                                   0x00, 0x00, 0x07, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00}
+#define UBX_PAYLOAD_CFG_SAVE      {0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, \
+                                   0x00, 0x00, 0x17}
+// IMU
+#define IMU_I2C_CLOCK_HZ          400000
+#define IMU_WAKE_DELAY_MS         50     // after PWR_MGMT_1 wake (boot only)
+#define IMU_WHO_AM_I_VALUE        0x68
+#define IMU_REG_SMPLRT_DIV        0x19
+#define IMU_REG_CONFIG            0x1A
+#define IMU_REG_GYRO_CONFIG       0x1B
+#define IMU_REG_ACCEL_CONFIG      0x1C
+#define IMU_REG_ACCEL_XOUT_H      0x3B
+#define IMU_REG_PWR_MGMT_1        0x6B
+#define IMU_REG_WHO_AM_I          0x75
+#define IMU_VAL_PWR_MGMT_1        0x01   // wake, gyro PLL
+#define IMU_VAL_SMPLRT_DIV        0x09   // 100 Hz
+#define IMU_VAL_CONFIG            0x03   // DLPF ~44 Hz
+#define IMU_VAL_GYRO_CONFIG       0x08   // +-500 deg/s
+#define IMU_VAL_ACCEL_CONFIG      0x10   // +-8 g
+#define IMU_BURST_LEN             14
+#define IMU_CAL_SAMPLES           200
+#define IMU_CAL_TIME_MS           2000
+#define IMU_DT_S                  0.01   // 100 Hz
+#define IMU_CF_ALPHA              0.98   // complementary filter gyro weight
+#define IMU_ALONG_ALPHA           0.2    // a_long low-pass
+#define IMU_AZ_LP_ALPHA           0.02   // az low-pass (az_hp = az - az_lp)
+#define GRAVITY_MS2               9.81
+#define IMU_RAD2DEG               57.29577951308232
+// Power
+#define ADC_VREF_V                3.3
+#define ADC_MAX_COUNT             4095
+#define VBAT_SAMPLES              8
+// Button
+#define BUTTON_DEBOUNCE_MS        30
+// Alerts (buzzer and LEDs are active HIGH: transistor / 330 ohm to LED)
+#define ALERT_OUT_ON              HIGH
+#define ALERT_OUT_OFF             LOW
+#define ALERT_SOS_LOCAL_PERIOD_MS 2000   // buzzer 1 s on / 1 s off
+#define ALERT_SOS_LOCAL_LED_MS    200    // red 5 Hz
+#define ALERT_SOS_REMOTE_BEEP_MS  80
+#define ALERT_SOS_REMOTE_COUNT    3      // 3 short beeps each second
+#define ALERT_SOS_REMOTE_PERIOD_MS 1000
+#define ALERT_SOS_REMOTE_LED_MS   500    // red 2 Hz
+#define ALERT_EEBL_PERIOD_MS      200    // 100/100 ms buzzer, red 5 Hz
+#define ALERT_CAUTION_PERIOD_MS   500    // 100 ms beep every 500 ms
+#define ALERT_CAUTION_BEEP_MS     100
+#define ALERT_HAZ_BEEP_MS         100    // 2 beeps, 100 ms apart, then yellow 2 Hz
+#define ALERT_HAZ_GAP_MS          100
+#define ALERT_HAZ_COUNT           2
+#define ALERT_HAZ_LED_PERIOD_MS   500    // yellow 2 Hz
+#define ALERT_NORMAL_BLINK_MS     1000   // green 1 Hz without GPS fix
+#define ALERT_LAMP_TEST_MS        100    // boot lamp test beep
+#define ALERT_NUM_PATTERNS        7
