@@ -1,0 +1,1735 @@
+[
+    {
+        "id": "v2v-tab",
+        "type": "tab",
+        "label": "V2V SCADA",
+        "disabled": false,
+        "info": "Modbus poller, decoder, map, dashboard, alarms, historian, commands."
+    },
+    {
+        "id": "71ef2ca3dbb65436",
+        "type": "ui-base",
+        "name": "V2V SCADA",
+        "path": "/dashboard",
+        "showPathInSidebar": false,
+        "navigationStyle": "default"
+    },
+    {
+        "id": "27f64e9726df53f4",
+        "type": "ui-theme",
+        "name": "V2V theme",
+        "colors": {
+            "surface": "#fcfcfd",
+            "primary": "#0d74ce",
+            "bgPage": "#f9f9fb",
+            "groupBg": "#ffffff",
+            "groupOutline": "#d9d9e0"
+        }
+    },
+    {
+        "id": "7708278c3037d0bf",
+        "type": "ui-page",
+        "name": "Map",
+        "ui": "71ef2ca3dbb65436",
+        "path": "/map",
+        "icon": "",
+        "layout": "grid",
+        "theme": "27f64e9726df53f4",
+        "order": 1,
+        "className": ""
+    },
+    {
+        "id": "c08eb2a2c0c97ac0",
+        "type": "ui-page",
+        "name": "Telemetry",
+        "ui": "71ef2ca3dbb65436",
+        "path": "/telemetry",
+        "icon": "",
+        "layout": "grid",
+        "theme": "27f64e9726df53f4",
+        "order": 2,
+        "className": ""
+    },
+    {
+        "id": "edda09f4d521cb8d",
+        "type": "ui-page",
+        "name": "V2V Link",
+        "ui": "71ef2ca3dbb65436",
+        "path": "/link",
+        "icon": "",
+        "layout": "grid",
+        "theme": "27f64e9726df53f4",
+        "order": 3,
+        "className": ""
+    },
+    {
+        "id": "966d7d1072bd785a",
+        "type": "ui-page",
+        "name": "Alarms",
+        "ui": "71ef2ca3dbb65436",
+        "path": "/alarms",
+        "icon": "",
+        "layout": "grid",
+        "theme": "27f64e9726df53f4",
+        "order": 4,
+        "className": ""
+    },
+    {
+        "id": "a70ef133753cd7ff",
+        "type": "ui-page",
+        "name": "Control",
+        "ui": "71ef2ca3dbb65436",
+        "path": "/control",
+        "icon": "",
+        "layout": "grid",
+        "theme": "27f64e9726df53f4",
+        "order": 5,
+        "className": ""
+    },
+    {
+        "id": "27398dbe05d60ecc",
+        "type": "sqlitedb",
+        "name": "v2v.db",
+        "db": "../historian/v2v.db",
+        "mode": "RWC"
+    },
+    {
+        "id": "81757b7207ee8d42",
+        "type": "inject",
+        "z": "v2v-tab",
+        "x": 60,
+        "y": 85,
+        "name": "Create tables (once)",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "wires": [
+            [
+                "e04bc3d26f552805"
+            ]
+        ]
+    },
+    {
+        "id": "e04bc3d26f552805",
+        "type": "function",
+        "z": "v2v-tab",
+        "x": 290,
+        "y": 130,
+        "name": "Schema statements",
+        "func": "\n    return [[\"CREATE TABLE IF NOT EXISTS telemetry (\\n  ts INTEGER, vehicle_id INTEGER, lat REAL, lon REAL, speed_kmh REAL, heading REAL,\\n  accel REAL, roll INTEGER, pitch INTEGER, flags INTEGER, battery INTEGER,\\n  rssi INTEGER, pdr REAL, distance REAL, ttc REAL, warn INTEGER);\",\"CREATE TABLE IF NOT EXISTS alarms (\\n  id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER, vehicle_id INTEGER,\\n  type TEXT, severity TEXT, lat REAL, lon REAL,\\n  acked INTEGER DEFAULT 0, ack_ts INTEGER, cleared_ts INTEGER);\"].map((s) => ({ topic: s }))];\n",
+        "outputs": 1,
+        "libs": [],
+        "initialize": "",
+        "finalize": "",
+        "timeout": 0,
+        "noerr": 0,
+        "wires": [
+            [
+                "ecbc0fe8e66d434b"
+            ]
+        ]
+    },
+    {
+        "id": "ecbc0fe8e66d434b",
+        "type": "sqlite",
+        "z": "v2v-tab",
+        "x": 520,
+        "y": 175,
+        "name": "DB schema",
+        "mydb": "27398dbe05d60ecc",
+        "sqlquery": "msg.topic",
+        "sql": "",
+        "wires": [
+            [
+                "fc70c6074ae7979a"
+            ]
+        ]
+    },
+    {
+        "id": "fc70c6074ae7979a",
+        "type": "function",
+        "z": "v2v-tab",
+        "x": 750,
+        "y": 220,
+        "name": "Schema done",
+        "func": "global.set('schemaDone', true); return null;",
+        "outputs": 1,
+        "libs": [],
+        "initialize": "",
+        "finalize": "",
+        "timeout": 0,
+        "noerr": 0,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "036f0c5a6c253a19",
+        "type": "inject",
+        "z": "v2v-tab",
+        "x": 60,
+        "y": 265,
+        "name": "Poll every 250 ms",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "0.25",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "wires": [
+            [
+                "85f42d609fa3ecdc"
+            ]
+        ]
+    },
+    {
+        "id": "85f42d609fa3ecdc",
+        "type": "function",
+        "z": "v2v-tab",
+        "x": 290,
+        "y": 310,
+        "name": "Modbus poll",
+        "func": "\n    const V2V = global.get('V2V');\n    const st = global.get('gwState') || { online: false, errorSince: null, lastOkTs: null, lastErr: null };\n    const status = () => ({ topic: 'status', payload: { online: st.online, errorSince: st.errorSince, lastOkTs: st.lastOkTs, ts: Date.now() } });\n    if (!global.get('schemaDone')) { node.send([null, status()]); return null; }\n    V2V.withBus(global, (client) => client.readHoldingRegisters(0, 110), 0)\n        .then((res) => {\n            st.online = true; st.errorSince = null; st.lastOkTs = Date.now(); st.lastErr = null;\n            global.set('gwState', st);\n            node.send([{ payload: res.data }, status()]);\n        })\n        .catch((err) => {\n            if (err && err.message === 'bus busy') { node.send([null, status()]); return; }\n            if (!st.errorSince) st.errorSince = Date.now();\n            st.online = false;\n            if (st.lastErr !== err.message) { node.warn('Modbus: ' + err.message); st.lastErr = err.message; }\n            global.set('gwState', st);\n            V2V.resetClient(global);\n            node.send([null, status()]);\n        });\n    return null;\n",
+        "outputs": 2,
+        "libs": [],
+        "initialize": "",
+        "finalize": "",
+        "timeout": 0,
+        "noerr": 0,
+        "wires": [
+            [
+                "407a9404ded94293"
+            ],
+            [
+                "e3d7f7628c9859c9"
+            ]
+        ]
+    },
+    {
+        "id": "407a9404ded94293",
+        "type": "function",
+        "z": "v2v-tab",
+        "x": 520,
+        "y": 355,
+        "name": "Decode",
+        "func": "const r = msg.payload;                               // 110 unsigned 16-bit values\nconst s16 = v => (v > 32767 ? v - 65536 : v);\nconst s32 = (hi, lo) => (hi << 16) | lo;             // signed 32-bit in JS\nconst gateway = { fw: r[0], status: r[1], neighbors: r[2], rttMs: r[3], acks: r[4],\n                  rx: r[5], tx: r[6], crcErr: r[7], gatewayId: r[8], uptime: r[9] };\nconst vehicles = [];\nfor (let slot = 0; slot < 4; slot++) {\n    const b = 10 + 20 * slot;\n    if (r[b] === 0) continue;\n    const f = r[b + 10];\n    vehicles.push({\n        slot, id: r[b],\n        lat: s32(r[b + 1], r[b + 2]) / 1e7, lon: s32(r[b + 3], r[b + 4]) / 1e7,\n        speedKmh: r[b + 5] / 100 * 3.6, heading: r[b + 6] / 100,\n        accel: s16(r[b + 7]) / 100, roll: s16(r[b + 8]), pitch: s16(r[b + 9]),\n        flags: f, hardBrake: !!(f & 1), crash: !!(f & 2), rollover: !!(f & 4), hazard: !!(f & 8),\n        gpsValid: !!(f & 64), lowBattery: !!(f & 128),\n        battery: r[b + 11], rssi: s16(r[b + 12]), snr: s16(r[b + 13]) / 10, pdr: r[b + 14] / 10,\n        distance: r[b + 15] === 65535 ? null : r[b + 15] / 10,\n        ttc: r[b + 16] === 65535 ? null : r[b + 16] / 10,\n        warn: r[b + 17], sats: r[b + 18] >> 4, hdop: r[b + 18] & 15, ageMs: r[b + 19]\n    });\n}\nmsg.payload = { ts: Date.now(), gateway, vehicles };\nreturn msg;",
+        "outputs": 1,
+        "libs": [],
+        "initialize": "",
+        "finalize": "",
+        "timeout": 0,
+        "noerr": 0,
+        "wires": [
+            [
+                "2be69b0e92117920",
+                "3608706bfe7dabf7",
+                "ca833653d219c98c",
+                "da6c74c60e00e651",
+                "e3d7f7628c9859c9",
+                "bf0ec832245dfaf5"
+            ]
+        ]
+    },
+    {
+        "id": "2be69b0e92117920",
+        "type": "function",
+        "z": "v2v-tab",
+        "x": 750,
+        "y": 400,
+        "name": "Map markers",
+        "func": "\n    const now = Date.now();\n    const R = 6371000;\n    const toR = (x) => x * Math.PI / 180;\n    const dist = (la1, lo1, la2, lo2) => {\n        const dLa = toR(la2 - la1), dLo = toR(lo2 - lo1);\n        const a = Math.sin(dLa / 2) ** 2 + Math.cos(toR(la1)) * Math.cos(toR(la2)) * Math.sin(dLo / 2) ** 2;\n        return 2 * R * Math.asin(Math.sqrt(a));\n    };\n    const p = msg.payload;\n    const hazards = flow.get('hazards') || [];\n    const lastMap = flow.get('lastMap') || {};\n    const prevIds = flow.get('mapIds') || [];\n    const prevHaz = flow.get('prevHaz') || {};\n    const sos = flow.get('sosOn') || {};\n    const out = [];\n    const ids = [];\n    let hazChanged = false;\n    for (const v of p.vehicles) {\n        ids.push(v.id);\n        const key = String(v.id);\n        if (!v.gpsValid || (v.lat === 0 && v.lon === 0)) { prevHaz[key] = !!v.hazard; continue; }\n        // hazard report = rising edge of the hazard flag; reports within 10 m of a hazard merge into it\n        if (v.hazard && !prevHaz[key]) {\n            let h = hazards.find((x) => dist(x.lat, x.lon, v.lat, v.lon) <= 10);\n            if (!h) {\n                h = { name: 'HAZ-' + (hazards.length + 1), lat: v.lat, lon: v.lon, count: 0 };\n                hazards.push(h);\n            }\n            h.count += 1;\n            hazChanged = true;\n            out.push({ payload: { name: h.name, lat: h.lat, lon: h.lon, layer: 'Hazards', icon: 'fa-exclamation-triangle', iconColor: 'yellow', label: 'Road hazard x' + h.count, popup: 'Road hazard: ' + h.count + ' report(s)' } });\n        }\n        prevHaz[key] = !!v.hazard;\n        // SOS marker (red) while crash or rollover is set; removed when cleared\n        const sosNow = !!(v.crash || v.rollover);\n        if (sosNow) {\n            out.push({ payload: { name: 'SOS-V' + v.id, lat: v.lat, lon: v.lon, layer: 'SOS', icon: 'fa-exclamation', iconColor: 'red', label: 'SOS V' + v.id, popup: (v.crash ? 'Crash' : 'Rollover') + ' SOS, vehicle ' + v.id } });\n        } else if (sos[key]) {\n            out.push({ payload: { name: 'SOS-V' + v.id, deleted: true } });\n        }\n        sos[key] = sosNow;\n        // vehicle marker, at most 2 updates per second per vehicle\n        if (!lastMap[key] || now - lastMap[key] >= 500) {\n            lastMap[key] = now;\n            out.push({ payload: { name: 'V' + v.id, lat: v.lat, lon: v.lon, bearing: v.heading, icon: 'fa-car', iconColor: ['green', 'orange', 'red'][v.warn] || 'green', label: Math.round(v.speedKmh) + ' km/h', layer: 'Vehicles', popup: 'Vehicle ' + v.id + ': ' + v.speedKmh.toFixed(1) + ' km/h, warn ' + v.warn } });\n        }\n    }\n    for (const id of prevIds) {\n        if (!ids.includes(id)) out.push({ payload: { name: 'V' + id, deleted: true } });\n    }\n    if (hazChanged) flow.set('hazards', hazards);\n    flow.set('lastMap', lastMap);\n    flow.set('mapIds', ids);\n    flow.set('prevHaz', prevHaz);\n    flow.set('sosOn', sos);\n    return [out.length ? out : null];\n",
+        "outputs": 1,
+        "libs": [],
+        "initialize": "",
+        "finalize": "",
+        "timeout": 0,
+        "noerr": 0,
+        "wires": [
+            [
+                "e7559cf75e8fc559"
+            ]
+        ]
+    },
+    {
+        "id": "e7559cf75e8fc559",
+        "type": "worldmap",
+        "z": "v2v-tab",
+        "x": 980,
+        "y": 445,
+        "name": "V2V map",
+        "path": "/worldmap",
+        "lat": "17.3850",
+        "lon": "78.4867",
+        "zoom": "16",
+        "layer": "OSMG",
+        "cluster": "",
+        "maxage": "",
+        "usermenu": "show",
+        "layers": "show",
+        "panit": "false",
+        "panlock": "false",
+        "zoomlock": "false",
+        "hiderightclick": "false",
+        "coords": "false",
+        "showgrid": "false",
+        "showruler": "false",
+        "allowFileDrop": "false",
+        "overlist": "DR,CO,RA,DN",
+        "maplist": "OSMG,OSMC,EsriC,EsriS,UKOS",
+        "mapname": "",
+        "wires": []
+    },
+    {
+        "id": "e5fc92476df5c4ff",
+        "type": "ui-group",
+        "name": "Worldmap",
+        "page": "7708278c3037d0bf",
+        "width": 12,
+        "height": 1,
+        "order": 1,
+        "className": ""
+    },
+    {
+        "id": "12723737514e39c5",
+        "type": "ui-template",
+        "z": "v2v-tab",
+        "x": 1210,
+        "y": 490,
+        "group": "e5fc92476df5c4ff",
+        "name": "Map",
+        "order": 1,
+        "width": 12,
+        "height": 12,
+        "templateScope": "local",
+        "className": "",
+        "format": "<template><iframe src=\"/worldmap\" style=\"width:100%;height:600px;border:0;\"></iframe></template>",
+        "wires": []
+    },
+    {
+        "id": "bb67f69a14c2d3cc",
+        "type": "ui-group",
+        "name": "Vehicle 1",
+        "page": "c08eb2a2c0c97ac0",
+        "width": 6,
+        "height": 1,
+        "order": 10,
+        "className": ""
+    },
+    {
+        "id": "3608706bfe7dabf7",
+        "type": "function",
+        "z": "v2v-tab",
+        "x": 520,
+        "y": 535,
+        "name": "Telemetry V1",
+        "func": "const f = (x, d) => (x === null || x === undefined) ? '--' : Number(x).toFixed(d);\nconst v = msg.payload.vehicles.find((x) => x.id === 1);\nif (!v) return [null, null, null, null, null, null, null, null, null, null];\nreturn [\n    { payload: v.speedKmh },\n        { payload: f(v.heading, 1) + \" deg\" },\n        { payload: v.accel, topic: \"accel\" },\n        { payload: \"roll \" + v.roll + \" deg, pitch \" + v.pitch + \" deg\" },\n        { payload: v.battery + \" %\" + (v.lowBattery ? \"  LOW\" : \"\") },\n        { payload: \"sats \" + v.sats + \", HDOP \" + v.hdop },\n        { payload: v.rssi + \" dBm / \" + f(v.snr, 1) + \" dB\" },\n        { payload: f(v.pdr, 1) + \" %\" },\n        { payload: v.ageMs + \" ms\" },\n        { payload: (v.gpsValid ? \"fix\" : \"NO FIX\") + \", flags 0x\" + v.flags.toString(16) }\n];",
+        "outputs": 10,
+        "libs": [],
+        "initialize": "",
+        "finalize": "",
+        "timeout": 0,
+        "noerr": 0,
+        "wires": [
+            [
+                "30c01fa66fd5dddf"
+            ],
+            [
+                "535ac117f6569310"
+            ],
+            [
+                "0dd7cef5ea3ac5d7"
+            ],
+            [
+                "402a2e766fa4089c"
+            ],
+            [
+                "e4b88870d921aa4e"
+            ],
+            [
+                "2cb0eeb2dd27a0ad"
+            ],
+            [
+                "6625580fb458b380"
+            ],
+            [
+                "cfd59951f78ce5bf"
+            ],
+            [
+                "ec6c62f9e63e9c78"
+            ],
+            [
+                "93e09006bd21edfa"
+            ]
+        ]
+    },
+    {
+        "id": "30c01fa66fd5dddf",
+        "type": "ui-gauge",
+        "z": "v2v-tab",
+        "x": 980,
+        "y": 580,
+        "group": "bb67f69a14c2d3cc",
+        "name": "Speed (km/h)",
+        "title": "Speed (km/h)",
+        "gtype": "gauge-half",
+        "min": 0,
+        "max": 60,
+        "units": "km/h",
+        "segments": [
+            {
+                "from": 0,
+                "color": "#55DBEC"
+            },
+            {
+                "from": 40,
+                "color": "#FF9800"
+            },
+            {
+                "from": 50,
+                "color": "#F44336"
+            }
+        ],
+        "width": 6,
+        "height": 3,
+        "order": 0,
+        "wires": []
+    },
+    {
+        "id": "535ac117f6569310",
+        "type": "ui-text",
+        "z": "v2v-tab",
+        "x": 980,
+        "y": 625,
+        "group": "bb67f69a14c2d3cc",
+        "name": "Heading",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "fontSize": 14,
+        "width": 6,
+        "height": 1,
+        "order": 1,
+        "wires": []
+    },
+    {
+        "id": "0dd7cef5ea3ac5d7",
+        "type": "ui-chart",
+        "z": "v2v-tab",
+        "x": 980,
+        "y": 670,
+        "group": "bb67f69a14c2d3cc",
+        "name": "Acceleration (m/s2)",
+        "label": "Acceleration (m/s2)",
+        "chartType": "line",
+        "category": "topic",
+        "categoryType": "msg",
+        "removeOlder": 60,
+        "removeOlderUnit": "1",
+        "width": 6,
+        "height": 4,
+        "order": 2,
+        "xAxisType": "time",
+        "ymin": "",
+        "ymax": "",
+        "wires": []
+    },
+    {
+        "id": "402a2e766fa4089c",
+        "type": "ui-text",
+        "z": "v2v-tab",
+        "x": 980,
+        "y": 715,
+        "group": "bb67f69a14c2d3cc",
+        "name": "Roll / pitch",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "fontSize": 14,
+        "width": 6,
+        "height": 1,
+        "order": 3,
+        "wires": []
+    },
+    {
+        "id": "e4b88870d921aa4e",
+        "type": "ui-text",
+        "z": "v2v-tab",
+        "x": 980,
+        "y": 760,
+        "group": "bb67f69a14c2d3cc",
+        "name": "Battery",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "fontSize": 14,
+        "width": 6,
+        "height": 1,
+        "order": 4,
+        "wires": []
+    },
+    {
+        "id": "2cb0eeb2dd27a0ad",
+        "type": "ui-text",
+        "z": "v2v-tab",
+        "x": 980,
+        "y": 805,
+        "group": "bb67f69a14c2d3cc",
+        "name": "Sats / HDOP",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "fontSize": 14,
+        "width": 6,
+        "height": 1,
+        "order": 5,
+        "wires": []
+    },
+    {
+        "id": "6625580fb458b380",
+        "type": "ui-text",
+        "z": "v2v-tab",
+        "x": 980,
+        "y": 850,
+        "group": "bb67f69a14c2d3cc",
+        "name": "RSSI / SNR",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "fontSize": 14,
+        "width": 6,
+        "height": 1,
+        "order": 6,
+        "wires": []
+    },
+    {
+        "id": "cfd59951f78ce5bf",
+        "type": "ui-text",
+        "z": "v2v-tab",
+        "x": 980,
+        "y": 895,
+        "group": "bb67f69a14c2d3cc",
+        "name": "PDR",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "fontSize": 14,
+        "width": 6,
+        "height": 1,
+        "order": 7,
+        "wires": []
+    },
+    {
+        "id": "ec6c62f9e63e9c78",
+        "type": "ui-text",
+        "z": "v2v-tab",
+        "x": 980,
+        "y": 940,
+        "group": "bb67f69a14c2d3cc",
+        "name": "Age",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "fontSize": 14,
+        "width": 6,
+        "height": 1,
+        "order": 8,
+        "wires": []
+    },
+    {
+        "id": "93e09006bd21edfa",
+        "type": "ui-text",
+        "z": "v2v-tab",
+        "x": 980,
+        "y": 985,
+        "group": "bb67f69a14c2d3cc",
+        "name": "GPS / flags",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "fontSize": 14,
+        "width": 6,
+        "height": 1,
+        "order": 9,
+        "wires": []
+    },
+    {
+        "id": "8d48cbe656aa4ea9",
+        "type": "ui-group",
+        "name": "Vehicle 2",
+        "page": "c08eb2a2c0c97ac0",
+        "width": 6,
+        "height": 1,
+        "order": 11,
+        "className": ""
+    },
+    {
+        "id": "ca833653d219c98c",
+        "type": "function",
+        "z": "v2v-tab",
+        "x": 520,
+        "y": 1030,
+        "name": "Telemetry V2",
+        "func": "const f = (x, d) => (x === null || x === undefined) ? '--' : Number(x).toFixed(d);\nconst v = msg.payload.vehicles.find((x) => x.id === 2);\nif (!v) return [null, null, null, null, null, null, null, null, null, null];\nreturn [\n    { payload: v.speedKmh },\n        { payload: f(v.heading, 1) + \" deg\" },\n        { payload: v.accel, topic: \"accel\" },\n        { payload: \"roll \" + v.roll + \" deg, pitch \" + v.pitch + \" deg\" },\n        { payload: v.battery + \" %\" + (v.lowBattery ? \"  LOW\" : \"\") },\n        { payload: \"sats \" + v.sats + \", HDOP \" + v.hdop },\n        { payload: v.rssi + \" dBm / \" + f(v.snr, 1) + \" dB\" },\n        { payload: f(v.pdr, 1) + \" %\" },\n        { payload: v.ageMs + \" ms\" },\n        { payload: (v.gpsValid ? \"fix\" : \"NO FIX\") + \", flags 0x\" + v.flags.toString(16) }\n];",
+        "outputs": 10,
+        "libs": [],
+        "initialize": "",
+        "finalize": "",
+        "timeout": 0,
+        "noerr": 0,
+        "wires": [
+            [
+                "e1fb4031428c0fe9"
+            ],
+            [
+                "01f7b320a1724888"
+            ],
+            [
+                "405f7aea4f2739b4"
+            ],
+            [
+                "1b27214cf313a130"
+            ],
+            [
+                "cdd7dec32fbdcad5"
+            ],
+            [
+                "e4e97fa3c4b16231"
+            ],
+            [
+                "0a17a0ed0f4f297d"
+            ],
+            [
+                "2a14c027fb4e3e16"
+            ],
+            [
+                "ce7857ada3ff5483"
+            ],
+            [
+                "0b415b962626459d"
+            ]
+        ]
+    },
+    {
+        "id": "e1fb4031428c0fe9",
+        "type": "ui-gauge",
+        "z": "v2v-tab",
+        "x": 980,
+        "y": 1075,
+        "group": "8d48cbe656aa4ea9",
+        "name": "Speed (km/h)",
+        "title": "Speed (km/h)",
+        "gtype": "gauge-half",
+        "min": 0,
+        "max": 60,
+        "units": "km/h",
+        "segments": [
+            {
+                "from": 0,
+                "color": "#55DBEC"
+            },
+            {
+                "from": 40,
+                "color": "#FF9800"
+            },
+            {
+                "from": 50,
+                "color": "#F44336"
+            }
+        ],
+        "width": 6,
+        "height": 3,
+        "order": 0,
+        "wires": []
+    },
+    {
+        "id": "01f7b320a1724888",
+        "type": "ui-text",
+        "z": "v2v-tab",
+        "x": 980,
+        "y": 1120,
+        "group": "8d48cbe656aa4ea9",
+        "name": "Heading",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "fontSize": 14,
+        "width": 6,
+        "height": 1,
+        "order": 1,
+        "wires": []
+    },
+    {
+        "id": "405f7aea4f2739b4",
+        "type": "ui-chart",
+        "z": "v2v-tab",
+        "x": 980,
+        "y": 1165,
+        "group": "8d48cbe656aa4ea9",
+        "name": "Acceleration (m/s2)",
+        "label": "Acceleration (m/s2)",
+        "chartType": "line",
+        "category": "topic",
+        "categoryType": "msg",
+        "removeOlder": 60,
+        "removeOlderUnit": "1",
+        "width": 6,
+        "height": 4,
+        "order": 2,
+        "xAxisType": "time",
+        "ymin": "",
+        "ymax": "",
+        "wires": []
+    },
+    {
+        "id": "1b27214cf313a130",
+        "type": "ui-text",
+        "z": "v2v-tab",
+        "x": 980,
+        "y": 1210,
+        "group": "8d48cbe656aa4ea9",
+        "name": "Roll / pitch",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "fontSize": 14,
+        "width": 6,
+        "height": 1,
+        "order": 3,
+        "wires": []
+    },
+    {
+        "id": "cdd7dec32fbdcad5",
+        "type": "ui-text",
+        "z": "v2v-tab",
+        "x": 980,
+        "y": 1255,
+        "group": "8d48cbe656aa4ea9",
+        "name": "Battery",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "fontSize": 14,
+        "width": 6,
+        "height": 1,
+        "order": 4,
+        "wires": []
+    },
+    {
+        "id": "e4e97fa3c4b16231",
+        "type": "ui-text",
+        "z": "v2v-tab",
+        "x": 980,
+        "y": 1300,
+        "group": "8d48cbe656aa4ea9",
+        "name": "Sats / HDOP",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "fontSize": 14,
+        "width": 6,
+        "height": 1,
+        "order": 5,
+        "wires": []
+    },
+    {
+        "id": "0a17a0ed0f4f297d",
+        "type": "ui-text",
+        "z": "v2v-tab",
+        "x": 980,
+        "y": 1345,
+        "group": "8d48cbe656aa4ea9",
+        "name": "RSSI / SNR",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "fontSize": 14,
+        "width": 6,
+        "height": 1,
+        "order": 6,
+        "wires": []
+    },
+    {
+        "id": "2a14c027fb4e3e16",
+        "type": "ui-text",
+        "z": "v2v-tab",
+        "x": 980,
+        "y": 1390,
+        "group": "8d48cbe656aa4ea9",
+        "name": "PDR",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "fontSize": 14,
+        "width": 6,
+        "height": 1,
+        "order": 7,
+        "wires": []
+    },
+    {
+        "id": "ce7857ada3ff5483",
+        "type": "ui-text",
+        "z": "v2v-tab",
+        "x": 980,
+        "y": 1435,
+        "group": "8d48cbe656aa4ea9",
+        "name": "Age",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "fontSize": 14,
+        "width": 6,
+        "height": 1,
+        "order": 8,
+        "wires": []
+    },
+    {
+        "id": "0b415b962626459d",
+        "type": "ui-text",
+        "z": "v2v-tab",
+        "x": 980,
+        "y": 1480,
+        "group": "8d48cbe656aa4ea9",
+        "name": "GPS / flags",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "fontSize": 14,
+        "width": 6,
+        "height": 1,
+        "order": 9,
+        "wires": []
+    },
+    {
+        "id": "da6c74c60e00e651",
+        "type": "function",
+        "z": "v2v-tab",
+        "x": 520,
+        "y": 1525,
+        "name": "Link widgets",
+        "func": "const f = (x, d) => (x === null || x === undefined || Number.isNaN(x)) ? '--' : Number(x).toFixed(d);\nconst gw = msg.payload.gateway;\nconst link = msg.payload.vehicles.filter((x) => x.slot > 0 && x.distance !== null)[0] || null;\nreturn [\n    { payload: link ? f(link.distance, 1) : \"--\" },\n    { payload: link && link.ttc !== null ? f(link.ttc, 1) : \"--\" },\n    { payload: ({ level: [\"SAFE\", \"CAUTION\", \"CRITICAL\"][link ? link.warn : 0] || \"SAFE\", color: [\"#2e7d32\", \"#ef6c00\", \"#c62828\"][link ? link.warn : 0] || \"#2e7d32\" }) },\n    { payload: f(gw.rttMs / 2, 1) },\n    { payload: \"RX \" + gw.rx + \"   TX \" + gw.tx + \"   CRC \" + gw.crcErr },\n    { payload: String(gw.neighbors) },\n    { payload: \"radio \" + ((gw.status & 1) ? \"OK\" : \"FAIL\") + \" | GPS \" + ((gw.status & 2) ? \"fix\" : \"no fix\") + \" | IMU \" + ((gw.status & 4) ? \"OK\" : \"FAIL\") + \" | SIM \" + ((gw.status & 8) ? \"on\" : \"off\") },\n    { payload: \"V\" + gw.gatewayId + \"  fw \" + (gw.fw / 100).toFixed(2) + \"  up \" + gw.uptime + \" s\" }\n];",
+        "outputs": 8,
+        "libs": [],
+        "initialize": "",
+        "finalize": "",
+        "timeout": 0,
+        "noerr": 0,
+        "wires": [
+            [
+                "a73576c84a398513"
+            ],
+            [
+                "76bebb34e4037ba9"
+            ],
+            [
+                "d9e607f0df116d18"
+            ],
+            [
+                "46ab86f116878175"
+            ],
+            [
+                "d0363c0ab651fea1"
+            ],
+            [
+                "63f19bb36daa6311"
+            ],
+            [
+                "e61caf130ce285f1"
+            ],
+            [
+                "f4a71fcbea9b7d38"
+            ]
+        ]
+    },
+    {
+        "id": "fb5c6759fe419e2b",
+        "type": "ui-group",
+        "name": "Link quality",
+        "page": "edda09f4d521cb8d",
+        "width": 6,
+        "height": 1,
+        "order": 20,
+        "className": ""
+    },
+    {
+        "id": "a73576c84a398513",
+        "type": "ui-text",
+        "z": "v2v-tab",
+        "x": 980,
+        "y": 1570,
+        "group": "fb5c6759fe419e2b",
+        "name": "Distance to neighbour (m)",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "fontSize": 14,
+        "width": 6,
+        "height": 1,
+        "order": 0,
+        "wires": []
+    },
+    {
+        "id": "76bebb34e4037ba9",
+        "type": "ui-text",
+        "z": "v2v-tab",
+        "x": 980,
+        "y": 1615,
+        "group": "fb5c6759fe419e2b",
+        "name": "TTC (s)",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "fontSize": 48,
+        "width": 6,
+        "height": 2,
+        "order": 1,
+        "wires": []
+    },
+    {
+        "id": "d9e607f0df116d18",
+        "type": "ui-template",
+        "z": "v2v-tab",
+        "x": 980,
+        "y": 1660,
+        "group": "fb5c6759fe419e2b",
+        "name": "Warning",
+        "width": 6,
+        "height": 2,
+        "order": 2,
+        "templateScope": "local",
+        "className": "",
+        "format": "<template><div :style=\"{background: color, color: '#fff', borderRadius: '8px', padding: '12px', textAlign: 'center', fontSize: '30px', fontWeight: '700'}\">{{ level }}</div></template>\n<script>\nexport default {\n  props: ['msg'],\n  data() { return { level: 'SAFE', color: '#2e7d32' }; },\n  watch: { msg: { deep: true, handler(m) { if (m && m.payload) { this.level = m.payload.level; this.color = m.payload.color; } } } }\n}\n</script>",
+        "wires": []
+    },
+    {
+        "id": "46ab86f116878175",
+        "type": "ui-text",
+        "z": "v2v-tab",
+        "x": 980,
+        "y": 1705,
+        "group": "fb5c6759fe419e2b",
+        "name": "Latency (RTT/2, ms)",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "fontSize": 14,
+        "width": 6,
+        "height": 1,
+        "order": 3,
+        "wires": []
+    },
+    {
+        "id": "d0363c0ab651fea1",
+        "type": "ui-text",
+        "z": "v2v-tab",
+        "x": 980,
+        "y": 1750,
+        "group": "fb5c6759fe419e2b",
+        "name": "RX / TX / CRC errors",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "fontSize": 14,
+        "width": 6,
+        "height": 1,
+        "order": 4,
+        "wires": []
+    },
+    {
+        "id": "63f19bb36daa6311",
+        "type": "ui-text",
+        "z": "v2v-tab",
+        "x": 980,
+        "y": 1795,
+        "group": "fb5c6759fe419e2b",
+        "name": "Active neighbours",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "fontSize": 14,
+        "width": 6,
+        "height": 1,
+        "order": 5,
+        "wires": []
+    },
+    {
+        "id": "e61caf130ce285f1",
+        "type": "ui-text",
+        "z": "v2v-tab",
+        "x": 980,
+        "y": 1840,
+        "group": "fb5c6759fe419e2b",
+        "name": "Gateway status",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "fontSize": 14,
+        "width": 6,
+        "height": 1,
+        "order": 6,
+        "wires": []
+    },
+    {
+        "id": "f4a71fcbea9b7d38",
+        "type": "ui-text",
+        "z": "v2v-tab",
+        "x": 980,
+        "y": 1885,
+        "group": "fb5c6759fe419e2b",
+        "name": "Gateway ID / FW / uptime",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "fontSize": 14,
+        "width": 6,
+        "height": 1,
+        "order": 7,
+        "wires": []
+    },
+    {
+        "id": "e3d7f7628c9859c9",
+        "type": "function",
+        "z": "v2v-tab",
+        "x": 1210,
+        "y": 1930,
+        "name": "Alarm logic",
+        "func": "\n    const now = Date.now();\n    const t = msg.topic || '';\n    const pl = msg.payload;\n    let entries = flow.get('alarms') || [];\n    let selected = flow.get('ackSel') || null;\n    let latest = flow.get('latest') || null;\n    let gw = flow.get('gwStatus') || { online: true, errorSince: null };\n    const seen = flow.get('seenIds') || [];\n    const gpsSince = flow.get('gpsSince') || {};\n    const outIns = [], outClr = [], outAck = [], notes = [];\n\n    const ackWhere = (pred) => {\n        for (const e of entries) {\n            if (!e.acked && pred(e)) {\n                e.acked = true; e.ack_ts = now;\n                outAck.push({ params: { $ack_ts: now, $ts: e.ts, $vehicle_id: e.vehicle_id, $type: e.type } });\n            }\n        }\n    };\n    if (t === 'status') { gw = pl; flow.set('gwStatus', gw); }\n    else if (t === 'ackSelect') { selected = Number(pl) || null; }\n    else if (t === 'ack_all') { ackWhere(() => true); }\n    else if (t === 'ack_sel') { if (selected) ackWhere((e) => e.ts === selected); }\n    else if (pl && pl.gateway && pl.vehicles) { latest = pl; flow.set('latest', pl); }\n\n    // Conditions to evaluate: key -> {type, vid, sev, lat, lon, on}\n    const want = {};\n    const add = (type, vid, sev, lat, lon, on) => { want[vid + ':' + type] = { type, vid, sev, lat, lon, on: !!on }; };\n    const online = gw.online !== false;\n    add('Gateway offline', 0, 'CRITICAL', 0, 0, !online && !!gw.errorSince && now - gw.errorSince > 2000);\n    if (online && latest) {\n        const present = [];\n        for (const v of latest.vehicles) {\n            present.push(v.id);\n            if (!seen.includes(v.id)) seen.push(v.id);\n            const la = v.lat, lo = v.lon;\n            if (!v.gpsValid) { if (!gpsSince[v.id]) gpsSince[v.id] = now; } else { delete gpsSince[v.id]; }\n            add('Crash / SOS', v.id, 'CRITICAL', la, lo, v.crash);\n            add('Rollover', v.id, 'CRITICAL', la, lo, v.rollover);\n            add('Collision risk', v.id, 'HIGH', la, lo, v.warn === 2);\n            add('Hard braking', v.id, 'MEDIUM', la, lo, v.hardBrake);\n            add('Road hazard', v.id, 'MEDIUM', la, lo, v.hazard);\n            add('V2V link lost', v.id, 'MEDIUM', la, lo, v.ageMs > 2000);\n            add('GPS fix lost', v.id, 'LOW', la, lo, !v.gpsValid && !!gpsSince[v.id] && now - gpsSince[v.id] > 5000);\n            add('Low battery', v.id, 'LOW', la, lo, v.lowBattery);\n        }\n        for (const id of seen) {\n            if (!present.includes(id)) add('V2V link lost', id, 'MEDIUM', 0, 0, true);\n        }\n    }\n\n    // Rising edge -> new active entry + INSERT; falling edge -> cleared_ts\n    for (const key of Object.keys(want)) {\n        const w = want[key];\n        const k = w.vid + ':' + w.type;\n        const idx = entries.findIndex((e) => e.key === k && !e.cleared);\n        if (w.on && idx < 0) {\n            entries.push({ key: k, type: w.type, vehicle_id: w.vid, severity: w.sev, ts: now, lat: w.lat, lon: w.lon, cleared: false, cleared_ts: null, acked: false, ack_ts: null, critical: w.sev === 'CRITICAL' });\n            outIns.push({ params: { $ts: now, $vehicle_id: w.vid, $type: w.type, $severity: w.sev, $lat: w.lat, $lon: w.lon } });\n            notes.push('ALARM ' + w.sev + ': ' + w.type + (w.vid ? ' (V' + w.vid + ')' : ' (gateway)'));\n        } else if (!w.on && idx >= 0) {\n            const e = entries[idx];\n            e.cleared = true; e.cleared_ts = now;\n            outClr.push({ params: { $cleared_ts: now, $ts: e.ts, $vehicle_id: e.vehicle_id, $type: e.type } });\n        }\n    }\n    // Non-critical cleared alarms leave the list; CRITICAL ones stay until acknowledged\n    entries = entries.filter((e) => !e.cleared || (e.critical && !e.acked));\n\n    flow.set('alarms', entries);\n    flow.set('ackSel', selected);\n    flow.set('seenIds', seen);\n    flow.set('gpsSince', gpsSince);\n\n    const rows = entries.map((e) => ({\n        time: new Date(e.ts).toLocaleTimeString(), vehicle: e.vehicle_id, type: e.type, severity: e.severity,\n        state: (e.cleared ? 'CLEARED' : 'ACTIVE') + (e.acked ? ', acked' : ', not acked')\n    }));\n    flow.set('visible', rows);\n    const rowsJson = JSON.stringify(rows);\n    const tblOut = flow.get('tblJson') !== rowsJson ? [{ payload: rows }] : [];\n    flow.set('tblJson', rowsJson);\n    const opts = entries.map((e) => ({ label: new Date(e.ts).toLocaleTimeString() + ' V' + e.vehicle_id + ' ' + e.type + ' [' + (e.cleared ? 'cleared' : 'active') + ']', value: String(e.ts) }));\n    const optsJson = JSON.stringify(opts);\n    const dropOut = flow.get('dropJson') !== optsJson ? [{ options: opts.length ? opts : [{ label: '(none)', value: '' }], payload: selected ? String(selected) : '' }] : [];\n    flow.set('dropJson', optsJson);\n\n    return [outIns, outClr, outAck, notes.map((n) => ({ payload: n })), tblOut, dropOut];\n",
+        "outputs": 6,
+        "libs": [],
+        "initialize": "",
+        "finalize": "",
+        "timeout": 0,
+        "noerr": 0,
+        "wires": [
+            [
+                "13023bd9ba92f606"
+            ],
+            [
+                "64ac42562aa7a497"
+            ],
+            [
+                "53855a041aad9a4e"
+            ],
+            [
+                "6f5f141182ee44b5"
+            ],
+            [
+                "f243683d085e1190"
+            ],
+            [
+                "7ceefacbeac068de"
+            ]
+        ]
+    },
+    {
+        "id": "13023bd9ba92f606",
+        "type": "sqlite",
+        "z": "v2v-tab",
+        "x": 1440,
+        "y": 1975,
+        "name": "DB alarm insert",
+        "mydb": "27398dbe05d60ecc",
+        "sqlquery": "prepared",
+        "sql": "INSERT INTO alarms (ts, vehicle_id, type, severity, lat, lon) VALUES ($ts, $vehicle_id, $type, $severity, $lat, $lon)",
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "64ac42562aa7a497",
+        "type": "sqlite",
+        "z": "v2v-tab",
+        "x": 1440,
+        "y": 2020,
+        "name": "DB alarm clear",
+        "mydb": "27398dbe05d60ecc",
+        "sqlquery": "prepared",
+        "sql": "UPDATE alarms SET cleared_ts = $cleared_ts WHERE ts = $ts AND vehicle_id = $vehicle_id AND type = $type",
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "53855a041aad9a4e",
+        "type": "sqlite",
+        "z": "v2v-tab",
+        "x": 1440,
+        "y": 2065,
+        "name": "DB alarm ack",
+        "mydb": "27398dbe05d60ecc",
+        "sqlquery": "prepared",
+        "sql": "UPDATE alarms SET acked = 1, ack_ts = $ack_ts WHERE ts = $ts AND vehicle_id = $vehicle_id AND type = $type",
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "6bd8ca664d65f6d6",
+        "type": "ui-group",
+        "name": "Active alarms",
+        "page": "966d7d1072bd785a",
+        "width": 12,
+        "height": 1,
+        "order": 30,
+        "className": ""
+    },
+    {
+        "id": "f243683d085e1190",
+        "type": "ui-table",
+        "z": "v2v-tab",
+        "x": 1210,
+        "y": 2110,
+        "group": "6bd8ca664d65f6d6",
+        "name": "Active alarms",
+        "label": "Active alarms (CRITICAL stay until acknowledged)",
+        "autocols": true,
+        "showSearch": false,
+        "deselect": true,
+        "selectionType": "none",
+        "width": 12,
+        "height": 6,
+        "order": 1,
+        "maxrows": 0,
+        "passthru": false,
+        "action": "replace",
+        "wires": []
+    },
+    {
+        "id": "7ceefacbeac068de",
+        "type": "ui-dropdown",
+        "z": "v2v-tab",
+        "x": 1210,
+        "y": 2155,
+        "group": "6bd8ca664d65f6d6",
+        "name": "ackSelect",
+        "label": "Alarm to acknowledge",
+        "topic": "ackSelect",
+        "topicType": "str",
+        "options": [
+            {
+                "label": "(none)",
+                "value": ""
+            }
+        ],
+        "width": 6,
+        "height": 1,
+        "order": 2,
+        "passthru": false,
+        "multiple": false,
+        "clearable": false,
+        "payload": "",
+        "className": "",
+        "wires": [
+            [
+                "e3d7f7628c9859c9"
+            ]
+        ]
+    },
+    {
+        "id": "45988e89e9c7acc1",
+        "type": "ui-button",
+        "z": "v2v-tab",
+        "x": 1210,
+        "y": 2200,
+        "group": "6bd8ca664d65f6d6",
+        "name": "ack_sel",
+        "label": "Acknowledge selected",
+        "payload": "click",
+        "payloadType": "str",
+        "topic": "ack_sel",
+        "topicType": "str",
+        "width": 3,
+        "height": 1,
+        "order": 3,
+        "icon": "",
+        "className": "",
+        "wires": [
+            [
+                "e3d7f7628c9859c9"
+            ]
+        ]
+    },
+    {
+        "id": "97b732a87decfdf1",
+        "type": "ui-button",
+        "z": "v2v-tab",
+        "x": 1210,
+        "y": 2245,
+        "group": "6bd8ca664d65f6d6",
+        "name": "ack_all",
+        "label": "Acknowledge all",
+        "payload": "click",
+        "payloadType": "str",
+        "topic": "ack_all",
+        "topicType": "str",
+        "width": 3,
+        "height": 1,
+        "order": 4,
+        "icon": "",
+        "className": "",
+        "wires": [
+            [
+                "e3d7f7628c9859c9"
+            ]
+        ]
+    },
+    {
+        "id": "90fba04d2873324e",
+        "type": "ui-group",
+        "name": "Alarm history (last 100, from SQLite)",
+        "page": "966d7d1072bd785a",
+        "width": 12,
+        "height": 1,
+        "order": 31,
+        "className": ""
+    },
+    {
+        "id": "2af092a7fa1a46e2",
+        "type": "inject",
+        "z": "v2v-tab",
+        "x": 60,
+        "y": 2290,
+        "name": "History every 10 s",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "10",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 2,
+        "topic": "SELECT id, ts, vehicle_id, type, severity, acked, ack_ts, cleared_ts FROM alarms ORDER BY id DESC LIMIT 100",
+        "payload": "",
+        "payloadType": "date",
+        "wires": [
+            [
+                "0bba92d23e6c3b06"
+            ]
+        ]
+    },
+    {
+        "id": "0bba92d23e6c3b06",
+        "type": "sqlite",
+        "z": "v2v-tab",
+        "x": 1440,
+        "y": 2335,
+        "name": "DB alarm history",
+        "mydb": "27398dbe05d60ecc",
+        "sqlquery": "msg.topic",
+        "sql": "",
+        "wires": [
+            [
+                "9e60adccf6d21e0b"
+            ]
+        ]
+    },
+    {
+        "id": "9e60adccf6d21e0b",
+        "type": "ui-table",
+        "z": "v2v-tab",
+        "x": 1210,
+        "y": 2380,
+        "group": "90fba04d2873324e",
+        "name": "Alarm history",
+        "label": "Alarm history",
+        "autocols": true,
+        "showSearch": true,
+        "deselect": true,
+        "selectionType": "none",
+        "width": 12,
+        "height": 6,
+        "order": 1,
+        "maxrows": 0,
+        "passthru": false,
+        "action": "replace",
+        "wires": []
+    },
+    {
+        "id": "ba450cc713f2fefd",
+        "type": "ui-group",
+        "name": "Export (SQLite historian)",
+        "page": "966d7d1072bd785a",
+        "width": 12,
+        "height": 1,
+        "order": 32,
+        "className": ""
+    },
+    {
+        "id": "e21015cac500ff00",
+        "type": "ui-template",
+        "z": "v2v-tab",
+        "x": 1210,
+        "y": 2425,
+        "group": "ba450cc713f2fefd",
+        "name": "CSV export",
+        "width": 12,
+        "height": 1,
+        "order": 1,
+        "templateScope": "local",
+        "className": "",
+        "format": "<template><div style=\"font-size:15px;\"><a href=\"/v2v/export.csv?table=alarms\" target=\"_blank\">Download alarms CSV</a> &nbsp;|&nbsp; <a href=\"/v2v/export.csv?table=telemetry\" target=\"_blank\">Download telemetry CSV</a></div></template>",
+        "wires": []
+    },
+    {
+        "id": "6f5f141182ee44b5",
+        "type": "ui-notification",
+        "z": "v2v-tab",
+        "x": 1440,
+        "y": 2470,
+        "ui": "71ef2ca3dbb65436",
+        "name": "Alarm notices",
+        "position": "top right",
+        "colorDefault": true,
+        "color": null,
+        "displayTime": "5",
+        "showCountdown": true,
+        "outputs": 0,
+        "allowDismiss": true,
+        "dismissText": "Dismiss",
+        "allowConfirm": false,
+        "confirmText": "Confirm",
+        "showInput": false,
+        "inputType": "text",
+        "inputLabel": "",
+        "raw": false,
+        "className": "",
+        "wires": []
+    },
+    {
+        "id": "bf0ec832245dfaf5",
+        "type": "function",
+        "z": "v2v-tab",
+        "x": 750,
+        "y": 2515,
+        "name": "Historian 1 Hz",
+        "func": "\n    const now = Date.now();\n    const last = flow.get('lastTel') || {};\n    const out = [];\n    for (const v of msg.payload.vehicles) {\n        if (last[v.id] && now - last[v.id] < 1000) continue;\n        last[v.id] = now;\n        out.push({ params: { $ts: now, $vehicle_id: v.id, $lat: v.lat, $lon: v.lon, $speed_kmh: v.speedKmh, $heading: v.heading, $accel: v.accel, $roll: v.roll, $pitch: v.pitch, $flags: v.flags, $battery: v.battery, $rssi: v.rssi, $pdr: v.pdr, $distance: v.distance, $ttc: v.ttc, $warn: v.warn } });\n    }\n    flow.set('lastTel', last);\n    return [out.length ? out : null];\n",
+        "outputs": 1,
+        "libs": [],
+        "initialize": "",
+        "finalize": "",
+        "timeout": 0,
+        "noerr": 0,
+        "wires": [
+            [
+                "d66dee7349776f69"
+            ]
+        ]
+    },
+    {
+        "id": "d66dee7349776f69",
+        "type": "sqlite",
+        "z": "v2v-tab",
+        "x": 1440,
+        "y": 2560,
+        "name": "DB telemetry insert",
+        "mydb": "27398dbe05d60ecc",
+        "sqlquery": "prepared",
+        "sql": "INSERT INTO telemetry (ts, vehicle_id, lat, lon, speed_kmh, heading, accel, roll, pitch, flags, battery, rssi, pdr, distance, ttc, warn) VALUES ($ts, $vehicle_id, $lat, $lon, $speed_kmh, $heading, $accel, $roll, $pitch, $flags, $battery, $rssi, $pdr, $distance, $ttc, $warn)",
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "1e1e0974a24e6fb8",
+        "type": "ui-group",
+        "name": "Commands",
+        "page": "a70ef133753cd7ff",
+        "width": 6,
+        "height": 1,
+        "order": 40,
+        "className": ""
+    },
+    {
+        "id": "154e6773061c7f27",
+        "type": "ui-button",
+        "z": "v2v-tab",
+        "x": 1210,
+        "y": 2605,
+        "group": "1e1e0974a24e6fb8",
+        "name": "hazard",
+        "label": "Hazard alert (1)",
+        "payload": "hazard",
+        "payloadType": "str",
+        "topic": "cmd",
+        "topicType": "str",
+        "width": 3,
+        "height": 1,
+        "order": 1,
+        "icon": "",
+        "className": "",
+        "wires": [
+            [
+                "7fa80ee48104b1c5"
+            ]
+        ]
+    },
+    {
+        "id": "f352d7da8efe9cb9",
+        "type": "ui-button",
+        "z": "v2v-tab",
+        "x": 1210,
+        "y": 2650,
+        "group": "1e1e0974a24e6fb8",
+        "name": "clearsos",
+        "label": "Clear SOS (3)",
+        "payload": "clearsos",
+        "payloadType": "str",
+        "topic": "cmd",
+        "topicType": "str",
+        "width": 3,
+        "height": 1,
+        "order": 2,
+        "icon": "",
+        "className": "",
+        "wires": [
+            [
+                "7fa80ee48104b1c5"
+            ]
+        ]
+    },
+    {
+        "id": "fe3136dedfa9817c",
+        "type": "ui-button",
+        "z": "v2v-tab",
+        "x": 1210,
+        "y": 2695,
+        "group": "1e1e0974a24e6fb8",
+        "name": "buzzer",
+        "label": "Buzzer test (4)",
+        "payload": "buzzer",
+        "payloadType": "str",
+        "topic": "cmd",
+        "topicType": "str",
+        "width": 3,
+        "height": 1,
+        "order": 3,
+        "icon": "",
+        "className": "",
+        "wires": [
+            [
+                "7fa80ee48104b1c5"
+            ]
+        ]
+    },
+    {
+        "id": "89f7e08375fe37fd",
+        "type": "ui-button",
+        "z": "v2v-tab",
+        "x": 1210,
+        "y": 2740,
+        "group": "1e1e0974a24e6fb8",
+        "name": "ping",
+        "label": "Ping (5)",
+        "payload": "ping",
+        "payloadType": "str",
+        "topic": "cmd",
+        "topicType": "str",
+        "width": 3,
+        "height": 1,
+        "order": 4,
+        "icon": "",
+        "className": "",
+        "wires": [
+            [
+                "7fa80ee48104b1c5"
+            ]
+        ]
+    },
+    {
+        "id": "6ec8f7b9ec69a601",
+        "type": "ui-group",
+        "name": "Speed advisory and target",
+        "page": "a70ef133753cd7ff",
+        "width": 6,
+        "height": 1,
+        "order": 41,
+        "className": ""
+    },
+    {
+        "id": "94ad8e0157fbeb88",
+        "type": "ui-number-input",
+        "z": "v2v-tab",
+        "x": 1210,
+        "y": 2785,
+        "group": "6ec8f7b9ec69a601",
+        "name": "speed",
+        "label": "Speed limit (km/h)",
+        "topic": "speed",
+        "topicType": "str",
+        "min": 0,
+        "max": 200,
+        "width": 3,
+        "height": 1,
+        "order": 1,
+        "passthru": false,
+        "sendOnDelay": false,
+        "sendOnBlur": true,
+        "sendOnEnter": true,
+        "className": "",
+        "clearable": false,
+        "icon": "",
+        "iconPosition": "left",
+        "iconInnerPosition": "inside",
+        "spinner": "default",
+        "tooltip": "",
+        "wires": [
+            [
+                "7fa80ee48104b1c5"
+            ]
+        ]
+    },
+    {
+        "id": "0584b011597dba3a",
+        "type": "ui-button",
+        "z": "v2v-tab",
+        "x": 1210,
+        "y": 2830,
+        "group": "6ec8f7b9ec69a601",
+        "name": "advisory",
+        "label": "Speed advisory (2)",
+        "payload": "advisory",
+        "payloadType": "str",
+        "topic": "cmd",
+        "topicType": "str",
+        "width": 3,
+        "height": 1,
+        "order": 2,
+        "icon": "",
+        "className": "",
+        "wires": [
+            [
+                "7fa80ee48104b1c5"
+            ]
+        ]
+    },
+    {
+        "id": "07a38035114521f5",
+        "type": "ui-dropdown",
+        "z": "v2v-tab",
+        "x": 1210,
+        "y": 2875,
+        "group": "6ec8f7b9ec69a601",
+        "name": "target",
+        "label": "Target",
+        "topic": "target",
+        "topicType": "str",
+        "options": [
+            {
+                "label": "All",
+                "value": "0"
+            },
+            {
+                "label": "Vehicle 1",
+                "value": "1"
+            },
+            {
+                "label": "Vehicle 2",
+                "value": "2"
+            }
+        ],
+        "width": 6,
+        "height": 1,
+        "order": 3,
+        "passthru": false,
+        "multiple": false,
+        "clearable": false,
+        "payload": "",
+        "className": "",
+        "wires": [
+            [
+                "7fa80ee48104b1c5"
+            ]
+        ]
+    },
+    {
+        "id": "7fa80ee48104b1c5",
+        "type": "function",
+        "z": "v2v-tab",
+        "x": 750,
+        "y": 2920,
+        "name": "Command builder",
+        "func": "\n    const codes = { hazard: 1, advisory: 2, clearsos: 3, buzzer: 4, ping: 5 };\n    const fail = (text) => { msg.statusCode = 400; msg.headers = { 'Content-Type': 'application/json' }; msg.payload = { ok: false, error: text }; return [null, msg]; };\n    if (msg.req) {\n        const q = msg.req.query || {};\n        const code = Number(q.code), param = Number(q.param || 0), target = Number(q.target || 0);\n        if (!Number.isInteger(code) || code < 1 || code > 5) return fail('code must be 1..5');\n        if (!Number.isInteger(param) || param < 0 || param > 65535) return fail('param must be 0..65535');\n        if (!Number.isInteger(target) || target < 0 || target > 65535) return fail('target must be 0..65535');\n        msg.payload = [code, param, target, 1];\n        return [msg, null];\n    }\n    if (msg.topic === 'target') { flow.set('target', Number(msg.payload) || 0); return [null, null]; }\n    if (msg.topic === 'speed') { flow.set('speed', Number(msg.payload) || 0); return [null, null]; }\n    if (msg.topic === 'cmd') {\n        const name = String(msg.payload);\n        if (!Object.prototype.hasOwnProperty.call(codes, name)) return [null, null];\n        const code = codes[name];\n        const param = code === 2 ? (flow.get('speed') || 50) : 0;\n        const target = flow.get('target') || 0;\n        msg.payload = [code, param, target, 1];\n        return [msg, null];\n    }\n    return [null, null];\n",
+        "outputs": 2,
+        "libs": [],
+        "initialize": "",
+        "finalize": "",
+        "timeout": 0,
+        "noerr": 0,
+        "wires": [
+            [
+                "64e82112ad0bd474"
+            ],
+            [
+                "6f0d85cc8e16af71"
+            ]
+        ]
+    },
+    {
+        "id": "64e82112ad0bd474",
+        "type": "function",
+        "z": "v2v-tab",
+        "x": 980,
+        "y": 2965,
+        "name": "Modbus write",
+        "func": "\n    const V2V = global.get('V2V');\n    const regs = msg.payload;\n    const isHttp = !!msg.res;\n    V2V.withBus(global, (client) => client.writeRegisters(100, regs), 2000)\n        .then(() => {\n            if (isHttp) node.send([{ payload: { ok: true, sent: regs }, req: msg.req, res: msg.res }, null]);\n            else node.send([null, { payload: 'Command sent: code ' + regs[0] + ', param ' + regs[1] + ', target ' + regs[2] }]);\n        })\n        .catch((err) => {\n            if (isHttp) node.send([{ statusCode: 503, payload: { ok: false, error: err.message }, req: msg.req, res: msg.res }, null]);\n            else node.send([null, { payload: 'Command failed: ' + err.message }]);\n        });\n    return null;\n",
+        "outputs": 2,
+        "libs": [],
+        "initialize": "",
+        "finalize": "",
+        "timeout": 0,
+        "noerr": 0,
+        "wires": [
+            [
+                "6f0d85cc8e16af71"
+            ],
+            [
+                "6f5f141182ee44b5"
+            ]
+        ]
+    },
+    {
+        "id": "6f0d85cc8e16af71",
+        "type": "http response",
+        "z": "v2v-tab",
+        "x": 1670,
+        "y": 3010,
+        "name": "HTTP reply",
+        "statusCode": "",
+        "headers": {},
+        "wires": []
+    },
+    {
+        "id": "3aeff002ab623183",
+        "type": "http in",
+        "z": "v2v-tab",
+        "x": 60,
+        "y": 3055,
+        "name": "GET /v2v/status",
+        "url": "/v2v/status",
+        "method": "get",
+        "upload": false,
+        "swaggerDoc": "",
+        "wires": [
+            [
+                "383de58f6fddcc69"
+            ]
+        ]
+    },
+    {
+        "id": "383de58f6fddcc69",
+        "type": "function",
+        "z": "v2v-tab",
+        "x": 290,
+        "y": 3100,
+        "name": "Build status",
+        "func": "\n    msg.headers = { 'Content-Type': 'application/json' };\n    msg.payload = {\n        ts: Date.now(),\n        source: env.get('V2V_SOURCE'),\n        gateway: flow.get('gwStatus') || null,\n        latest: flow.get('latest') || null,\n        activeAlarms: flow.get('visible') || []\n    };\n    return msg;\n",
+        "outputs": 1,
+        "libs": [],
+        "initialize": "",
+        "finalize": "",
+        "timeout": 0,
+        "noerr": 0,
+        "wires": [
+            [
+                "6f0d85cc8e16af71"
+            ]
+        ]
+    },
+    {
+        "id": "5e315ddd2e6a382b",
+        "type": "http in",
+        "z": "v2v-tab",
+        "x": 60,
+        "y": 3145,
+        "name": "GET /v2v/command",
+        "url": "/v2v/command",
+        "method": "get",
+        "upload": false,
+        "swaggerDoc": "",
+        "wires": [
+            [
+                "7fa80ee48104b1c5"
+            ]
+        ]
+    },
+    {
+        "id": "90ddecd4bfbab638",
+        "type": "http in",
+        "z": "v2v-tab",
+        "x": 60,
+        "y": 3190,
+        "name": "GET /v2v/export.csv",
+        "url": "/v2v/export.csv",
+        "method": "get",
+        "upload": false,
+        "swaggerDoc": "",
+        "wires": [
+            [
+                "9de58c3d863eeec7"
+            ]
+        ]
+    },
+    {
+        "id": "9de58c3d863eeec7",
+        "type": "function",
+        "z": "v2v-tab",
+        "x": 290,
+        "y": 3235,
+        "name": "Export request",
+        "func": "\n    const cols = {\n        telemetry: ['ts', 'vehicle_id', 'lat', 'lon', 'speed_kmh', 'heading', 'accel', 'roll', 'pitch', 'flags', 'battery', 'rssi', 'pdr', 'distance', 'ttc', 'warn'],\n        alarms: ['id', 'ts', 'vehicle_id', 'type', 'severity', 'lat', 'lon', 'acked', 'ack_ts', 'cleared_ts']\n    };\n    const table = (msg.req.query || {}).table;\n    if (!Object.prototype.hasOwnProperty.call(cols, table)) {\n        msg.statusCode = 400; msg.headers = { 'Content-Type': 'application/json' };\n        msg.payload = { ok: false, error: 'table must be telemetry or alarms' };\n        return [null, msg];\n    }\n    msg.table = table;\n    msg.cols = cols[table];\n    msg.topic = table === 'telemetry' ? 'SELECT * FROM telemetry ORDER BY ts' : 'SELECT * FROM alarms ORDER BY id';\n    return [msg, null];\n",
+        "outputs": 2,
+        "libs": [],
+        "initialize": "",
+        "finalize": "",
+        "timeout": 0,
+        "noerr": 0,
+        "wires": [
+            [
+                "2cc868fe5b3aadef"
+            ],
+            [
+                "6f0d85cc8e16af71"
+            ]
+        ]
+    },
+    {
+        "id": "2cc868fe5b3aadef",
+        "type": "sqlite",
+        "z": "v2v-tab",
+        "x": 520,
+        "y": 3280,
+        "name": "DB export query",
+        "mydb": "27398dbe05d60ecc",
+        "sqlquery": "msg.topic",
+        "sql": "",
+        "wires": [
+            [
+                "05d89c676cabd68c"
+            ]
+        ]
+    },
+    {
+        "id": "05d89c676cabd68c",
+        "type": "function",
+        "z": "v2v-tab",
+        "x": 750,
+        "y": 3325,
+        "name": "To CSV",
+        "func": "\n    const rows = Array.isArray(msg.payload) ? msg.payload : [];\n    const cols = msg.cols;\n    const esc = (v) => {\n        if (v === null || v === undefined) return '';\n        const s = String(v);\n        return /[\",\\r\\n]/.test(s) ? '\"' + s.replace(/\"/g, '\"\"') + '\"' : s;\n    };\n    const lines = [cols.join(',')].concat(rows.map((r) => cols.map((c) => esc(r[c])).join(',')));\n    msg.headers = { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename=\"v2v_' + msg.table + '.csv\"' };\n    msg.payload = lines.join('\\r\\n') + '\\r\\n';\n    return msg;\n",
+        "outputs": 1,
+        "libs": [],
+        "initialize": "",
+        "finalize": "",
+        "timeout": 0,
+        "noerr": 0,
+        "wires": [
+            [
+                "6f0d85cc8e16af71"
+            ]
+        ]
+    }
+]
