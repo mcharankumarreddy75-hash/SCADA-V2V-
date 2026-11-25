@@ -10,7 +10,7 @@ Options:
     --id N          vehicle ID 1..254 (-DMY_VEHICLE_ID=N)
     --sim           simulation mode (-DSIM_MODE=1)
     --gateway       gateway build (-DIS_GATEWAY=1); needs gateway.cpp
-    --log           reserved for Phase 8 (-DLOG_MODE=1); no other effect yet
+    --log           LOG_MODE=1: 20 Hz CSV log (a_long, a_total, az_hp, roll, pitch, speed, level, TTC) for threshold tuning
     --compile-only  build only, do not upload
     --port PORT     upload port (not needed for SWD upload; passed through if given)
 
@@ -61,7 +61,7 @@ def main():
     p.add_argument("--id", type=int, required=True, help="vehicle ID, 1..254")
     p.add_argument("--sim", action="store_true", help="simulation mode (SIM_MODE=1)")
     p.add_argument("--gateway", action="store_true", help="gateway build (IS_GATEWAY=1)")
-    p.add_argument("--log", action="store_true", help="LOG_MODE=1 (reserved for Phase 8)")
+    p.add_argument("--log", action="store_true", help="LOG_MODE=1: 20 Hz CSV data log for threshold tuning (S13.3)")
     p.add_argument("--compile-only", action="store_true", help="compile, do not upload")
     p.add_argument("--port", help="upload port (optional)")
     args = p.parse_args()
