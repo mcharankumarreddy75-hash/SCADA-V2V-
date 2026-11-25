@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[2]
 HOST = ROOT / "tests" / "host"
 BUILD = HOST / "build"
 FW = ROOT / "firmware" / "v2v_obu"
-PORTABLE_SOURCES = ["v2v_packet", "geo", "neighbors", "safety"]
+PORTABLE_SOURCES = ["v2v_packet", "geo", "neighbors", "safety", "modbus_rtu"]
 GXX_GLOB = "C:/Users/*/AppData/Local/Microsoft/WinGet/Packages/BrechtSanders.WinLibs*/mingw64/bin/g++.exe"
 
 
