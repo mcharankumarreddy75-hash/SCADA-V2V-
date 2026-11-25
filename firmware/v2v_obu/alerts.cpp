@@ -108,9 +108,11 @@ void alert_beep(uint32_t ms, uint32_t now_ms) {
 }
 
 void alert_lamp_test() {
+    // S10.5: lamp test 0.5 s (all LEDs) + 100 ms beep at the start. Boot only (blocking is allowed).
     write_outputs(true, true, true, true);
-    digitalWrite(PIN_BUZZER, ALERT_OUT_ON);
     delay(ALERT_LAMP_TEST_MS);
+    write_outputs(false, true, true, true);
+    delay(ALERT_LAMP_TEST_LED_MS - ALERT_LAMP_TEST_MS);
     write_outputs(false, false, false, false);
 }
 

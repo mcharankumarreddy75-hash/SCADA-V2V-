@@ -166,11 +166,11 @@
 #define ALERT_OUT_ON              HIGH
 #define ALERT_OUT_OFF             LOW
 #define ALERT_SOS_LOCAL_PERIOD_MS 2000   // buzzer 1 s on / 1 s off
-#define ALERT_SOS_LOCAL_LED_MS    200    // red 5 Hz
+#define ALERT_SOS_LOCAL_LED_MS    100    // half-period: red 5 Hz (100 on / 100 off)
 #define ALERT_SOS_REMOTE_BEEP_MS  80
 #define ALERT_SOS_REMOTE_COUNT    3      // 3 short beeps each second
 #define ALERT_SOS_REMOTE_PERIOD_MS 1000
-#define ALERT_SOS_REMOTE_LED_MS   500    // red 2 Hz
+#define ALERT_SOS_REMOTE_LED_MS   250    // half-period: red 2 Hz
 #define ALERT_EEBL_PERIOD_MS      200    // 100/100 ms buzzer, red 5 Hz
 #define ALERT_CAUTION_PERIOD_MS   500    // 100 ms beep every 500 ms
 #define ALERT_CAUTION_BEEP_MS     100
@@ -178,8 +178,9 @@
 #define ALERT_HAZ_GAP_MS          100
 #define ALERT_HAZ_COUNT           2
 #define ALERT_HAZ_LED_PERIOD_MS   500    // yellow 2 Hz
-#define ALERT_NORMAL_BLINK_MS     1000   // green 1 Hz without GPS fix
-#define ALERT_LAMP_TEST_MS        100    // boot lamp test beep
+#define ALERT_NORMAL_BLINK_MS     500    // half-period: green 1 Hz without GPS fix
+#define ALERT_LAMP_TEST_MS        100    // boot lamp test beep (S10.5)
+#define ALERT_LAMP_TEST_LED_MS    500    // boot lamp test: all LEDs on 0.5 s (S10.5)
 #define ALERT_NUM_PATTERNS        7
 
 // ===== Added in Phase 6 =====
