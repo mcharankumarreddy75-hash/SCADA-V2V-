@@ -25,6 +25,12 @@ Options:
   --bin-m N        distance bin width in metres for PDR / RSSI (default 25)
   --synthetic      force the SYNTHETIC banner. It is also automatic when an input file name starts
                    with "sample_".
+  --sos-ref LAT LON  with --db: A8/A9 location check. Every Crash / SOS and Rollover alarm must be within
+                   5 m of this reference (the OBU's averaged stationary position at the drop spot).
+                   With --from/--to, the window's mean position per vehicle is printed to stdout as a
+                   reference candidate.
+
+--db also writes the A13 battery runtime (battery_runtime.png and a table in its section).
 
 summary.md: each analysis writes one section delimited by <!-- section:ID --> markers. A later run
 replaces only its own sections, so analysing one input at a time keeps the others. The "inputs"
@@ -34,6 +40,7 @@ synthetic and real sections: if the existing summary's synthetic state differs, 
 import argparse
 import csv
 import datetime as dt
+import math
 import re
 import sqlite3
 import sys
@@ -164,8 +171,15 @@ def analyze_db(ctx):
             "SELECT ts, vehicle_id, distance, rssi, pdr, ttc, warn FROM telemetry "
             "WHERE 1=1" + where + " ORDER BY vehicle_id, ts", args).fetchall()
         alm = conn.execute(
-            "SELECT ts, vehicle_id, type, severity FROM alarms WHERE 1=1" + where
+            "SELECT ts, vehicle_id, type, severity, lat, lon FROM alarms WHERE 1=1" + where
             + " ORDER BY ts", args).fetchall()
+        bat = conn.execute(
+            "SELECT ts, vehicle_id, battery, flags FROM telemetry WHERE battery IS NOT NULL" + where
+            + " ORDER BY vehicle_id, ts", args).fetchall()
+        fixes = conn.execute(
+            "SELECT ts, vehicle_id, lat, lon FROM telemetry "
+            "WHERE lat IS NOT NULL AND (lat <> 0 OR lon <> 0)" + where
+            + " ORDER BY vehicle_id, ts", args).fetchall()
     finally:
         conn.close()
 
@@ -313,7 +327,116 @@ def analyze_db(ctx):
         md.append(md_table(["time", "vehicle", "type", "severity"], rows[:60]))
         if len(rows) > 60:
             md.append(f"({len(rows) - 60} more rows not shown.)")
+
+    if bat:
+        md.append(battery_section(bat, ctx.out, images))
+    else:
+        md.append("### A13 battery runtime\nNo battery readings in this window.")
+    if getattr(ctx, "sos_ref", None):
+        md.append(sos_section(alm, ctx.sos_ref))
+    if ctx.t0 is not None and ctx.t1 is not None:
+        reference_candidates(fixes)
     return ("db", "\n\n".join(md), images)
+
+
+# ---------------------------------------------------------------- --db: A13 battery, A8/A9 location
+
+EARTH_R = 6371008.8     # m, mean Earth radius for the equirectangular distance
+MS_PER_H = 3600000.0
+A13_HOURS = 5.0         # A13 pass: runtime >= 5 h
+A8_TOL_M = 5.0          # A8 location tolerance, same as A5
+LOW_BATTERY_BIT = 128   # FLAG_LOW_BATTERY = (1u << 7), firmware/v2v_obu/v2v_packet.h
+
+
+def equirect_m(lat1, lon1, lat2, lon2):
+    """Distance in metres between two lat/lon points (equirectangular approximation)."""
+    x = math.radians(lon2 - lon1) * math.cos(math.radians((lat1 + lat2) / 2.0))
+    y = math.radians(lat2 - lat1)
+    return EARTH_R * math.hypot(x, y)
+
+
+def battery_section(bat, out, images):
+    """bat rows: (ts, vehicle_id, battery %, flags), ordered by vehicle then ts."""
+    by_vid = OrderedDict()
+    for ts, vid, batt, flags in bat:
+        by_vid.setdefault(vid, []).append((ts, batt, flags))
+    fig, ax = new_fig(w=7.5, h=4.0)
+    colors = [BLUE, ORANGE, AQUA, GRAY]
+    rows = []
+    for i, (vid, series) in enumerate(by_vid.items()):
+        pos = [r for r in series if r[1] > 0]
+        if not pos:
+            rows.append((vid, "-", "-", "-", "-", "-", "no reading above 0 %"))
+            continue
+        start, end = pos[0], pos[-1]
+        hours = (end[0] - start[0]) / MS_PER_H
+        low = next((r for r in series if r[2] is not None and r[2] & LOW_BATTERY_BIT), None)
+        low_txt = "not seen" if low is None else f"{(low[0] - start[0]) / MS_PER_H:.2f}"
+        cutoff = any(r[1] == 0 for r in series)
+        if not cutoff:
+            verdict = f"incomplete (no cut-off reading, {hours:.2f} h so far)"
+        else:
+            verdict = "PASS" if hours >= A13_HOURS else "FAIL"
+        rows.append((vid, f"{start[1]}", f"{end[1]}", f"{hours:.2f}", low_txt,
+                     "yes" if cutoff else "no", verdict))
+        shown = [r for r in series if r[0] >= start[0]]
+        ax.plot([(r[0] - start[0]) / MS_PER_H for r in shown], [r[1] for r in shown],
+                color=colors[i % len(colors)], linewidth=1.6, label=f"vehicle {vid}")
+    ax.axvline(A13_HOURS, color=RED, linestyle="--", linewidth=1, label="A13 5 h")
+    ax.set_xlabel("time since first reading with battery > 0 (h)")
+    ax.set_ylabel("battery (%)")
+    ax.set_ylim(0, 105)
+    ax.set_title(ptitle("Battery vs run time"))
+    ax.legend(frameon=False, fontsize=8)
+    name = save(fig, out, "battery_runtime.png")
+    images.append(name)
+    return "\n\n".join([
+        "### A13 battery runtime",
+        "Duration = first row to last row with battery > 0. Low battery = first row with the "
+        "LOW_BATTERY flag (bit 7). Cut-off = a row with battery 0 %. Without a cut-off reading the "
+        "run is incomplete and gets no verdict.",
+        md_table(["vehicle", "start %", "end %", "duration h", "time to low battery h",
+                  "cut-off reached", "A13 (>= 5 h)"], rows),
+        img(name, "battery runtime"),
+    ])
+
+
+def sos_section(alm, ref):
+    """A8/A9: every Crash / SOS and Rollover alarm within A8_TOL_M of the reference."""
+    rows = []
+    for a in alm:
+        if a[2] not in ("Crash / SOS", "Rollover"):
+            continue
+        lat, lon = a[4], a[5]
+        if lat is None or lon is None or (lat == 0 and lon == 0):
+            rows.append((local_time(a[0]), a[1], a[2], "-", "-", "no valid position", "FAIL"))
+            continue
+        d = equirect_m(ref[0], ref[1], lat, lon)
+        rows.append((local_time(a[0]), a[1], a[2], f"{lat:.6f}", f"{lon:.6f}", f"{d:.2f}",
+                     "PASS" if d <= A8_TOL_M else "FAIL"))
+    md = ["### A8 / A9 alarm position vs reference",
+          f"Reference (`--sos-ref`): lat {ref[0]:.6f}, lon {ref[1]:.6f}. Each Crash / SOS or Rollover "
+          f"alarm must be within {A8_TOL_M:.0f} m of it (same tolerance as A5)."]
+    if rows:
+        md.append(md_table(["time", "vehicle", "type", "lat", "lon", "distance m", "<= 5 m"], rows))
+    else:
+        md.append("No Crash / SOS or Rollover alarm in this window.")
+    return "\n\n".join(md)
+
+
+def reference_candidates(fixes):
+    """stdout only: mean GPS position per vehicle in the window, to copy into --sos-ref."""
+    by_vid = OrderedDict()
+    for _ts, vid, lat, lon in fixes:
+        by_vid.setdefault(vid, []).append((lat, lon))
+    if not by_vid:
+        print("reference: no GPS fixes in this window")
+    for vid, pts in by_vid.items():
+        mlat = sum(p[0] for p in pts) / len(pts)
+        mlon = sum(p[1] for p in pts) / len(pts)
+        spread = max(equirect_m(mlat, mlon, la, lo) for la, lo in pts)
+        print(f"reference candidate, vehicle {vid}: --sos-ref {mlat:.6f} {mlon:.6f} "
+              f"(mean of {len(pts)} fixes, max spread {spread:.1f} m)")
 
 
 # ---------------------------------------------------------------- --rtt (A3 latency)
@@ -580,12 +703,16 @@ def main(argv=None):
     ap.add_argument("--to", dest="time_to", help="window end for --db")
     ap.add_argument("--bin-m", type=float, default=25.0, help="distance bin width (m)")
     ap.add_argument("--synthetic", action="store_true", help="force the SYNTHETIC banner")
+    ap.add_argument("--sos-ref", nargs=2, type=float, metavar=("LAT", "LON"),
+                    help="A8/A9 reference position (needs --db)")
     args = ap.parse_args(argv)
 
     given = [(f, p) for f, p in (("--db", args.db), ("--rtt", args.rtt),
                                  ("--distance-error", args.distance_error), ("--imu-log", args.imu_log)) if p]
     if not given:
         ap.error("give at least one of --db, --rtt, --distance-error, --imu-log")
+    if args.sos_ref and not args.db:
+        ap.error("--sos-ref needs --db")
 
     synthetic = args.synthetic or any(Path(p).name.startswith("sample_") for _, p in given)
     TITLE_PREFIX = "[SYNTHETIC] " if synthetic else ""
@@ -610,7 +737,8 @@ def main(argv=None):
             status.append(f"- `{flag}`: **MISSING** (`{p}` not found)")
             failed = True
             continue
-        ctx = argparse.Namespace(path=p, out=out, t0=t0, t1=t1, bin_m=args.bin_m, window_text=window_text)
+        ctx = argparse.Namespace(path=p, out=out, t0=t0, t1=t1, bin_m=args.bin_m, window_text=window_text,
+                                 sos_ref=tuple(args.sos_ref) if args.sos_ref else None)
         try:
             sid, body, images = analysers[flag](ctx)
         except Exception as e:  # noqa: BLE001 - report the failure in the summary and keep going

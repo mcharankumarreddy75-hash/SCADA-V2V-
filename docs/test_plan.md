@@ -178,14 +178,16 @@ Pass criteria are those of §S14. The Phase 8 exit needs PASS for the Level-1 fe
 
 ### A8 Crash, padded drop on foam, then still
 - **Set-up:** OBU #1 (`--log`) in a padded box on foam. Laptop with SCADA open and the serial log running with the timestamped console (§2.1).
+- **Reference position (before the first drop):** put the box on the drop spot, keep it still, and let it run for 30 s with GPS fix. Note the start and end times (laptop clock). Then run `tools/.venv/Scripts/python.exe tools/log_analyzer.py --db scada/historian/v2v.db --from "<start>" --to "<end>"`. It prints `reference candidate, vehicle 1: --sos-ref <lat> <lon> (mean of N fixes, max spread X m)`, which is the mean of OBU #1's own GPS position from the SCADA telemetry. Write the lat, lon and spread in Notes. If the spread is large (more than a few metres), the box was not still: repeat the 30 s.
 - **Procedure:** drop the box from the height that gives a_total above 4 g (check the CSV on a test drop first). Leave it still. Repeat 3 times, with a minute between drops.
-- **Data:** `data/a8_run<N>.csv` and `data/a8_run<N>_console.txt`, SCADA DB around the drop.
-- **Pass:** the `Crash / SOS` alarm appears on SCADA within 2 s of the impact (both timestamps from the laptop clock) and carries a valid position (lat/lon not 0).
+- **Data:** `data/a8_run<N>.csv` and `data/a8_run<N>_console.txt`, SCADA DB around the drop, and the reference numbers from the step above.
+- **Analysis:** `log_analyzer.py --db scada/historian/v2v.db --from "<drop 1 minus 1 min>" --to "<end>" --sos-ref <lat> <lon>` adds the table "A8 / A9 alarm position vs reference" to `docs/results/summary.md`. Each `Crash / SOS` and `Rollover` alarm row gets its distance to the reference.
+- **Pass:** the `Crash / SOS` alarm appears on SCADA within 2 s of the impact (both timestamps from the laptop clock), and its lat/lon is within 5 m of the reference (same tolerance as A5; a lat/lon of 0 fails).
 - **Watch:** SOS fires only when the vehicle is detected as still within 3 s of the impact (`CRASH_CONFIRM_MS`), using GPS speed. If GPS speed drops slowly, the SOS can be late or missing. Report the measured delay, do not change the threshold without me.
 
 ### A9 Rollover, on its side for 2 s
 - **Set-up:** OBU #1 (`--log`) on a padded surface.
-- **Procedure:** lay it on one side and hold it for 3 s (the trigger is above 60° for 1 s). Return it upright. Repeat 3 times.
+- **Procedure:** lay it on one side and hold it there for 2 s (the trigger is above 60° for `ROLLOVER_TIME_MS` = 1000 ms, so 2 s is enough). Return it upright. Repeat 3 times.
 - **Data:** `data/a9_rollover_run<N>.csv`, SCADA alarms.
 - **Pass:** the `Rollover` alarm appears on SCADA for each run, and the CSV roll or pitch shows the tilt above 60°.
 

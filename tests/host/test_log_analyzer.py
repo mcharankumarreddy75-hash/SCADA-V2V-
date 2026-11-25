@@ -60,6 +60,31 @@ class LogAnalyzerSampleTest(unittest.TestCase):
         summary = (out / "summary.md").read_text(encoding="utf-8")
         self.assertEqual(summary.count("<!-- section:rtt-sample_rtt -->"), 1)
 
+    def test_db_battery_runtime_and_sos_reference(self):
+        samples = self.tmp / "sample"
+        make_sample_data.generate(samples)
+        out = self.tmp / "out"
+        rc = log_analyzer.main([
+            "--db", str(samples / "sample_v2v.db"),
+            "--sos-ref", str(make_sample_data.SOS_REF[0]), str(make_sample_data.SOS_REF[1]),
+            "--out-dir", str(out),
+        ])
+        self.assertEqual(rc, 0)
+        png = out / "battery_runtime.png"
+        self.assertTrue(png.exists())
+        with open(png, "rb") as f:
+            self.assertEqual(f.read(8), b"\x89PNG\r\n\x1a\n")
+
+        summary = (out / "summary.md").read_text(encoding="utf-8")
+        self.assertIn("### A13 battery runtime", summary)
+        self.assertIn("| vehicle | start % | end % | duration h | time to low battery h |", summary)
+        # the sample run drains to 10 % and never reaches cut-off, so the verdict must be incomplete
+        self.assertIn("incomplete", summary)
+        self.assertIn("### A8 / A9 alarm position vs reference", summary)
+        self.assertIn("| time | vehicle | type | lat | lon | distance m | <= 5 m |", summary)
+        self.assertIn("| PASS |", summary)
+        self.assertIn("| FAIL |", summary)  # the 9 m alarm in the sample
+
     def test_missing_input_is_reported_and_fails(self):
         out = self.tmp / "out"
         rc = log_analyzer.main(["--db", str(self.tmp / "nope.db"), "--out-dir", str(out)])
