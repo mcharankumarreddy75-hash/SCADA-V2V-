@@ -297,3 +297,14 @@
 #define CMD_CODE_BUZZER_TEST      4
 #define CMD_CODE_PING             5        // not a vehicle COMMAND: PING packet instead
 #define KMH_PER_MS                3.6      // km/h per m/s (S11.4 code 2)
+
+// ===== Added in Phase 8 =====
+// Data logging (LOG_MODE == 1, tools/flash.py --log). One CSV row per FCW tick (every
+// LOOP_FCW_PERIOD_MS = 50 ms, i.e. 20 Hz) on Serial1 and, in OBU builds, on USB Serial.
+// The 1 Hz debug line is off in this build. Values are fixed point: integer = value x LOG_CSV_SCALE
+// (no float printf on newlib-nano). Columns: ms, a_long (m/s^2), a_total (g), az_hp (m/s^2),
+// roll (deg), pitch (deg), speed (m/s), level (0/1/2), ttc (s).
+#define LOG_CSV_SCALE             100      // fixed-point factor for every value column
+#define LOG_CSV_LINE_MAX          128      // buffer for one row (the header is sent in chunks)
+#define LOG_CSV_TTC_NONE          -1       // ttc column when there is no TTC (infinite)
+#define LOG_CSV_LIMIT             2000000000L  // clamp for the fixed-point integers

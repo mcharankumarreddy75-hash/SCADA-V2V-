@@ -76,6 +76,7 @@ static long clamp_round(double v, long lo, long hi) {
     return lround(v);
 }
 
+#if LOG_MODE != 1   // 1 Hz text log: not used in the data-logging build
 static const char *state_name(uint8_t st) {
     switch (st) {
     case OBU_BOOT:    return "BOOT";
@@ -85,6 +86,7 @@ static const char *state_name(uint8_t st) {
     default:          return "?";
     }
 }
+#endif
 
 // Appends formatted text at offset `at`, never past `cap - 1`. Returns the new offset.
 static size_t put(char *buf, size_t cap, size_t at, const char *fmt, ...) {
@@ -321,6 +323,86 @@ static void run_detectors(uint32_t now) {
     }
 }
 
+// ---------------------------------------------------------------- data logging CSV (LOG_MODE == 1, Phase 8)
+#if LOG_MODE == 1
+// Header line, sent once per port (and again after a USB reconnect). Fixed-point columns, see config.h.
+static const char csv_header[] =
+    "ms,a_long_x100,a_total_x100,az_hp_x100,roll_x100,pitch_x100,speed_x100,level,ttc_x100\n";
+#define CSV_HDR_LEN (sizeof(csv_header) - 1)
+
+static char csv_line[LOG_CSV_LINE_MAX];   // the one pending row
+static size_t csv_len = 0;                // length of the pending row, 0 = none
+static size_t csv_pos_uart = 0;           // bytes of csv_line already written to Serial1
+static size_t csv_hdr_uart = 0;           // bytes of csv_header already written to Serial1
+#if !IS_GATEWAY
+static size_t csv_pos_usb = 0;
+static size_t csv_hdr_usb = 0;
+#endif
+
+// Called at 20 Hz from run_fcw(). A row that does not fit the free port buffers is dropped, never waited for.
+static void csv_emit(uint32_t now) {
+    if (csv_len != 0) return;                 // previous row still on its way: drop this one
+    const imu_state_t *im = imu_get();
+    const long lim = LOG_CSV_LIMIT;
+    long ttc_x = isfinite(g_app.min_ttc_s)
+                     ? clamp_round(g_app.min_ttc_s * LOG_CSV_SCALE, 0, lim)
+                     : LOG_CSV_TTC_NONE;
+    size_t at = put(csv_line, LOG_CSV_LINE_MAX, 0, "%lu,%ld,%ld,%ld,%ld,%ld,%ld,%u,%ld\n",
+                    (unsigned long)now,
+                    clamp_round(im->a_long * LOG_CSV_SCALE, -lim, lim),
+                    clamp_round(im->a_total_g * LOG_CSV_SCALE, -lim, lim),
+                    clamp_round(im->az_hp * LOG_CSV_SCALE, -lim, lim),
+                    clamp_round(im->roll * LOG_CSV_SCALE, -lim, lim),
+                    clamp_round(im->pitch * LOG_CSV_SCALE, -lim, lim),
+                    clamp_round(g_app.own.speed_ms * LOG_CSV_SCALE, -lim, lim),
+                    (unsigned)g_app.warn_level,
+                    ttc_x);
+    csv_len = at;
+    csv_pos_uart = (csv_hdr_uart >= CSV_HDR_LEN) ? 0 : csv_len;   // header not out yet: skip this row
+#if !IS_GATEWAY
+    csv_pos_usb = (Serial && csv_hdr_usb >= CSV_HDR_LEN) ? 0 : csv_len;
+#endif
+}
+
+// Writes the header and the pending row to each port, as far as its transmit buffer has room.
+static void csv_pump(void) {
+    if (csv_hdr_uart < CSV_HDR_LEN) {
+        size_t room = (size_t)Serial1.availableForWrite();
+        size_t want = CSV_HDR_LEN - csv_hdr_uart;
+        if (want > room) want = room;
+        if (want > 0) csv_hdr_uart += Serial1.write((const uint8_t *)csv_header + csv_hdr_uart, want);
+    }
+    if (csv_pos_uart < csv_len) {
+        size_t room = (size_t)Serial1.availableForWrite();
+        size_t want = csv_len - csv_pos_uart;
+        if (want > room) want = room;
+        if (want > 0) csv_pos_uart += Serial1.write((const uint8_t *)csv_line + csv_pos_uart, want);
+    }
+#if !IS_GATEWAY
+    if (!Serial) {                            // no host on USB: drop the row, send the header on connect
+        csv_pos_usb = csv_len;
+        csv_hdr_usb = 0;
+    } else {
+        if (csv_hdr_usb < CSV_HDR_LEN) {
+            size_t room = (size_t)Serial.availableForWrite();
+            size_t want = CSV_HDR_LEN - csv_hdr_usb;
+            if (want > room) want = room;
+            if (want > 0) csv_hdr_usb += Serial.write((const uint8_t *)csv_header + csv_hdr_usb, want);
+        }
+        if (csv_pos_usb < csv_len) {
+            size_t room = (size_t)Serial.availableForWrite();
+            size_t want = csv_len - csv_pos_usb;
+            if (want > room) want = room;
+            if (want > 0) csv_pos_usb += Serial.write((const uint8_t *)csv_line + csv_pos_usb, want);
+        }
+    }
+    if (csv_pos_uart >= csv_len && csv_pos_usb >= csv_len) csv_len = 0;
+#else
+    if (csv_pos_uart >= csv_len) csv_len = 0;
+#endif
+}
+#endif  // LOG_MODE == 1
+
 // ---------------------------------------------------------------- 20 Hz FCW (S9.3)
 
 static void run_fcw(uint32_t now) {
@@ -367,11 +449,16 @@ static void run_fcw(uint32_t now) {
         alert_clear(ALERT_FCW_CAUTION);
         fcw_caution_owned = false;
     }
+
+#if LOG_MODE == 1
+    csv_emit(now);                            // Phase 8: 20 Hz data-logging row
+#endif
 }
 
 // ---------------------------------------------------------------- debug log (Serial1, and USB when not a gateway)
 
 // Seconds with one decimal place ("3.5"), or "inf" for INFINITY. No float printf (nano libc).
+#if LOG_MODE != 1
 static void fmt_tenths(char *out, size_t cap, double v) {
     if (!isfinite(v)) {
         snprintf(out, cap, "inf");
@@ -425,6 +512,8 @@ static void build_log(uint32_t now) {
     log_pos_usb = Serial ? 0 : log_len;        // no host on USB: skip the mirror
 #endif
 }
+
+#endif
 
 // Writes as many pending bytes as each port has room for. Never waits.
 static void log_pump(void) {
@@ -560,9 +649,14 @@ void loop() {
     if (due(now, &next_sec_ms, LOOP_SEC_PERIOD_MS)) {
         power_read();
         radio_set_enabled(!power_get()->cutoff);   // below VBAT_CUTOFF: TX off, RX on
+#if LOG_MODE != 1                             // the 1 Hz text line is off in the data-logging build
         build_log(now);
+#endif
     }
     log_pump();
+#if LOG_MODE == 1
+    csv_pump();
+#endif
 
     IWatchdog.reload();
 }
