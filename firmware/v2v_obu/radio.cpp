@@ -84,8 +84,18 @@ static bool read_packet(radio_rx_t *rx) {
     return true;
 }
 
+// A packet that arrived just before a transmit is read out first and kept here, so the
+// TX-done flag clear below cannot discard it. radio_service() returns it on its next call.
+static radio_rx_t pending_rx;
+static bool pending_valid = false;
+
 bool radio_send(const v2v_packet_t *pkt) {
     if (!ok || !enabled || pkt == NULL) return false;
+    if (rf_flag) {                                         // unread RX waiting (§S7.3)
+        rf_flag = false;
+        if (!pending_valid) pending_valid = read_packet(&pending_rx);
+        else radio_chip.startReceive();                    // one slot only; newer packet is lost
+    }
     int16_t st = radio_chip.transmit((const uint8_t *)pkt, RADIO_PAYLOAD_LEN);
     // DIO1 also rose for TX-done: discard that edge so it is not read as a packet.
     rf_flag = false;
@@ -115,7 +125,11 @@ bool radio_service(uint32_t now_ms, radio_rx_t *rx) {
     bool got = false;
     if (!ok) return false;
 
-    if (rf_flag) {
+    if (pending_valid && rx != NULL) {                     // packet saved by radio_send()
+        *rx = pending_rx;
+        pending_valid = false;
+        got = true;
+    } else if (rf_flag) {
         rf_flag = false;
         if (rx != NULL) got = read_packet(rx);
         else { radio_chip.startReceive(); }

@@ -74,6 +74,7 @@ static void commit_fix(uint32_t now_ms) {
 }
 
 void gps_init() {
+    g.fix_utc_ms = TIMESTAMP_NONE;               // §S8.2: no fix yet
     GPSSerial.begin(GPS_BAUD);
     uint32_t t0 = millis();
     uint32_t cs0 = tiny.passedChecksum();

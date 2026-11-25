@@ -74,20 +74,15 @@ pkt_result_t pkt_validate(const uint8_t *buf, size_t len, const rx_ctx_t *ctx,
     if (pkt.vehicle_id == ctx->own_id) return PKT_ERR_OWN;
 
     // 5. Sequence: duplicate / old packets dropped; first packet, reboot (silent > 5 s) accepted.
+    // The sequence entry is only committed after steps 6-7 pass ("drop at the first failure").
     seq_entry_t *e = seq_find(st, pkt.vehicle_id);
-    if (e == NULL) {
-        e = seq_alloc(st, now_ms);
-        e->used = true;
-        e->id = pkt.vehicle_id;
-    } else {
+    if (e != NULL) {
         bool rebooted = (uint32_t)(now_ms - e->last_seen_ms) > (uint32_t)SENDER_REBOOT_MS;
         if (!rebooted) {
             uint8_t d = (uint8_t)(pkt.seq - e->last_seq);
             if (d == 0 || d >= 128) return PKT_ERR_DUP;   // duplicate or older
         }
     }
-    e->last_seq = pkt.seq;
-    e->last_seen_ms = now_ms;
 
     // 6. Freshness (only when both sides have GPS and not in SIM_MODE)
     if (!ctx->sim_mode && ctx->own_gps_valid &&
@@ -102,6 +97,14 @@ pkt_result_t pkt_validate(const uint8_t *buf, size_t len, const rx_ctx_t *ctx,
     if (is_target_checked(pkt.type) && pkt.target_id != 0 && pkt.target_id != ctx->own_id) {
         return PKT_ERR_TARGET;
     }
+
+    if (e == NULL) {
+        e = seq_alloc(st, now_ms);
+        e->used = true;
+        e->id = pkt.vehicle_id;
+    }
+    e->last_seq = pkt.seq;
+    e->last_seen_ms = now_ms;
 
     *out = pkt;
     return PKT_OK;

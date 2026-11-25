@@ -128,7 +128,7 @@ void app_fill_header(v2v_packet_t *p) {
 
     memset(p, 0, sizeof *p);
     p->vehicle_id = MY_VEHICLE_ID;
-    p->timestamp = g->fix_utc_ms;                                // fix time, TIMESTAMP_NONE without GPS
+    p->timestamp = g->fix ? g->fix_utc_ms : TIMESTAMP_NONE;      // §S8.2: fix time, 0xFFFFFFFF without GPS
     p->lat_e7 = g->lat_e7;
     p->lon_e7 = g->lon_e7;
     p->speed_cms = (uint16_t)clamp_round(g->speed_ms * 100.0, 0, 65535);

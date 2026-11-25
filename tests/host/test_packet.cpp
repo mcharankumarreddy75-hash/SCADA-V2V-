@@ -329,3 +329,25 @@ TEST(seq_table_replaces_least_recently_seen) {
     CHECK_EQ(has2, 0);
     CHECK_EQ(has10, 1);
 }
+
+// §S8.6 "drop at the first failure": a packet rejected at step 7 (wrong target) must not
+// advance the sender's sequence state, so a later valid packet with the same seq is accepted.
+TEST(rejected_packet_does_not_commit_sequence) {
+    v2v_packet_t out;
+    uint8_t buf[32];
+    v2v_packet_t p;
+    seq_table_t st;
+    seq_table_init(&st);
+
+    fill(p, PKT_COMMAND, 2, 7, 0);
+    p.target_id = 3;      // not us (own = 1) -> dropped at step 7
+    pkt_build(&p, PKT_COMMAND, 7);
+    to_bytes(p, buf);
+    CHECK_EQ(pkt_validate(buf, 32, ctx(), &st, 0, &out), PKT_ERR_TARGET);
+
+    fill(p, PKT_BSM, 2, 7, 0);   // same sender, same seq: must NOT be seen as a duplicate
+    pkt_build(&p, PKT_BSM, 7);
+    to_bytes(p, buf);
+    CHECK_EQ(pkt_validate(buf, 32, ctx(), &st, 10, &out), PKT_OK);
+    CHECK_EQ(pkt_validate(buf, 32, ctx(), &st, 20, &out), PKT_ERR_DUP);  // now it is
+}
